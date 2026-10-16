@@ -1,5 +1,6 @@
 import { compact, personalBests } from './history.js'
 import { volume } from './summary.js'
+import { activityLabel } from './activity.js'
 
 export const FORMATS = { story: [1080, 1920], post: [1080, 1350] }
 export const GRADIENTS = {
@@ -12,7 +13,7 @@ export const GRADIENTS = {
  * Everything the recap image shows, from one session.
  * `history` is all sets of the exercises involved, so personal bests are judged against the past.
  */
-export function recapData({ session, sets, history = sets, exercisesById }) {
+export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {} }) {
   const mine = [...sets].sort((a, b) => a.ts - b.ts)
   const order = [...new Set(mine.map(s => s.exerciseId))]
   const bests = new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id))]))
@@ -27,7 +28,8 @@ export function recapData({ session, sets, history = sets, exercisesById }) {
     lines: order.map(id => {
       const list = mine.filter(s => s.exerciseId === id)
       return { name: exercisesById[id]?.name ?? id, detail: compact(list), best: list.some(s => bests.has(s.id)) }
-    }),
+    }).concat([...activityLogs].sort((a, b) => a.ts - b.ts).map(l => (
+      { name: activitiesById[l.activityId]?.name ?? l.activityId, detail: activityLabel(l), best: false }))),
   }
 }
 

@@ -100,3 +100,57 @@ describe('repo', () => {
     expect(daily(data.sets).map(d => [d.date, d.volume, d.maxKg])).toEqual([['2026-10-16', 304, 16], ['2026-10-17', 200, 20]])
   })
 })
+
+describe('activities', () => {
+  it('seeds the defaults on a fresh database', async () => {
+    expect((await repo.db.activities.toArray()).map(a => a.name)).toEqual(['Gym Bike', 'Rowing', 'Running'])
+  })
+
+  it('logs running from duration and pace, lands in the session summary and the backup', async () => {
+    const s = await repo.startSession()
+    at(T0 + 5 * MIN)
+    const id = await repo.logActivity({ activityId: 'running', minutes: 30, pace: "6'", notes: ' easy ' })
+    expect(await repo.db.activityLogs.get(id)).toMatchObject({ minutes: 30, km: 5, sessionId: s.id, date: '2026-10-16', notes: 'easy' })
+    expect(await repo.logActivity({ activityId: 'running', pace: '6' })).toBeNull()
+    at(T0 + 40 * MIN)
+    const closed = await repo.stopSession({ ...L, activities: 'activities' })
+    expect(closed.summary).toContain('0 sets · 0 exercises · 1 activities')
+    expect(closed.summary).toContain('Running: 30 min · 5 km · 6:00/km (easy)')
+    const file = await repo.backup()
+    expect(file.activityLogs).toHaveLength(1)
+    expect(file.activities.map(a => a.id)).toContain('running')
+  })
+
+  it('reuses an activity by name, creates new ones, archives used ones on delete', async () => {
+    expect((await repo.ensureActivity('  running ')).id).toBe('running')
+    const swim = await repo.ensureActivity('Swimming')
+    expect(swim).toEqual({ id: 'swimming', name: 'Swimming', archived: false })
+    await repo.logActivity({ activityId: 'swimming', minutes: 40 })
+    await repo.deleteActivity('swimming')
+    await repo.deleteActivity('rowing')
+    expect((await repo.db.activities.get('swimming')).archived).toBe(true)
+    expect(await repo.db.activities.get('rowing')).toBeUndefined()
+    expect((await repo.ensureActivity('swimming')).archived).toBe(false)
+  })
+
+  it('restores a v1 backup with the default activities', async () => {
+    const v1 = { format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [], sets: [], sessions: [], notes: [] }
+    await repo.restore(v1)
+    expect(await repo.db.activities.count()).toBe(3)
+    expect(await repo.db.activityLogs.count()).toBe(0)
+  })
+})
+
+describe('upgrade from v1', () => {
+  it('keeps existing data and adds the default activities', async () => {
+    const { default: Dexie } = await import('dexie')
+    const name = `upgrade-${n++}`
+    const v1 = new Dexie(name)
+    v1.version(1).stores({ exercises: 'id, name', groups: 'id, order', sets: '++id, ts, date, exerciseId, sessionId, [exerciseId+date]', sessions: 'id, start', rests: '++id, sessionId, start', notes: '++id, ts, date, sessionId' })
+    await v1.sets.add({ ts: T0, date: '2026-10-16', exerciseId: 'halos', reps: 10, kg: 16 })
+    v1.close()
+    const db = createDb(name)
+    expect(await db.sets.count()).toBe(1)
+    expect((await db.activities.toArray()).map(a => a.id)).toEqual(['gym-bike', 'rowing', 'running'])
+  })
+})

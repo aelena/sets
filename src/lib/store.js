@@ -12,6 +12,8 @@ export const groups = liveQuery(() => db.groups.orderBy('order').toArray())
 export const activeSession = liveQuery(() => repo.activeSession())
 export const activeRest = liveQuery(() => repo.activeRest().then(r => (r && !r.end ? r : null)))
 export const setCount = liveQuery(() => db.sets.count())
+export const activities = liveQuery(() => db.activities.toArray().then(a => a.filter(x => !x.archived).sort((x, y) => x.name.localeCompare(y.name))))
+export const activityLogs = liveQuery(() => db.activityLogs.toArray())
 
 /** One clock for every running timer on screen. */
 export const now = readable(Date.now(), set => {

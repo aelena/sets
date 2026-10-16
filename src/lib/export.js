@@ -1,4 +1,5 @@
 import { hhmm, dateKey } from './time.js'
+import { paceOf, formatPace } from './activity.js'
 
 /** One row per set, flat, ready for Excel. Set number counts within (day, exercise). */
 export function setRows(sets, { exercises, groups, sessions }) {
@@ -34,6 +35,21 @@ export const sessionRows = sessions =>
     summary: s.summary ?? '',
   }))
 
+export function activityRows(logs, { activities = [], sessions = [] }) {
+  const ac = Object.fromEntries(activities.map(a => [a.id, a]))
+  const se = Object.fromEntries(sessions.map(s => [s.id, s]))
+  return [...logs].sort((a, b) => a.ts - b.ts).map(l => ({
+    date: l.date,
+    time: hhmm(l.ts),
+    activity: ac[l.activityId]?.name ?? l.activityId,
+    minutes: l.minutes ?? null,
+    km: l.km ?? null,
+    pace_min_km: paceOf(l) ? formatPace(paceOf(l)) : '',
+    notes: l.notes ?? '',
+    session: se[l.sessionId] ? `${dateKey(se[l.sessionId].start)} ${hhmm(se[l.sessionId].start)}` : '',
+  }))
+}
+
 export const noteRows = notes =>
   [...notes].sort((a, b) => a.ts - b.ts).map(n => ({ date: n.date, time: hhmm(n.ts), note: n.text }))
 
@@ -43,6 +59,7 @@ export async function workbook(data) {
   const wb = XLSX.utils.book_new()
   const add = (rows, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name)
   add(setRows(data.sets, data), 'sets')
+  add(activityRows(data.activityLogs ?? [], data), 'activities')
   add(sessionRows(data.sessions), 'sessions')
   add(noteRows(data.notes), 'notes')
   const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })

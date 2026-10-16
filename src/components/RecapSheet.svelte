@@ -22,8 +22,15 @@
     if ($settings.recapBg === 'picked') $settings.recapBg = 'ink' // a picked photo is not kept between openings
     const sets = await db.sets.where('sessionId').equals(session.id).toArray()
     const ids = [...new Set(sets.map(s => s.exerciseId))]
-    const [history, exercises] = await Promise.all([db.sets.where('exerciseId').anyOf(ids).toArray(), db.exercises.bulkGet(ids)])
-    data = recapData({ session, sets, history, exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])) })
+    const [history, exercises, activityLogs, activities] = await Promise.all([
+      db.sets.where('exerciseId').anyOf(ids).toArray(), db.exercises.bulkGet(ids),
+      db.activityLogs.where('sessionId').equals(session.id).toArray(), db.activities.toArray(),
+    ])
+    data = recapData({
+      session, sets, history, activityLogs,
+      exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
+      activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
+    })
   })
 
   const bg = $derived($settings.recapBg)

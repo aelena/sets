@@ -13,6 +13,7 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 - **Logging a set takes two taps.** Tap **+**: reps and kg are prefilled from your last set today, or from the target. Confirm, or adjust and confirm. A counter shows `2/5` per exercise; "Undo" is offered right after each set, and any logged set can be edited or deleted.
 - **Last time, at a glance.** Under each exercise: `last: 10 · 10 · 9 @16kg · Wed`, the sets of the most recent earlier day.
 - **Personal bests.** A small flame marks a set that no earlier set matched on both weight and reps (or seconds). Nothing flames on an exercise's first day.
+- **Activities.** Running, Rowing and Gym Bike come preloaded under the exercise list, and "Other activity…" takes any name and keeps it for next time. Log a duration, a distance and a pace (min/km): fill any two and the third is worked out ("30 min at 6'" → 5 km). Pace accepts `6`, `6:00`, `6'` or `6'30"`. Activities show in the session summary, the recap image, History and Progress (minutes, km, pace), and in their own Excel sheet. Rename or remove them under Edit → Activity.
 - **Sessions are optional.** ▶ starts a session and ■ stops it. Sets logged outside a session (between meetings, say) are kept with their date and time. A session left running is closed automatically after two hours without activity, at the time of its last set.
 - **Rest timer.** The hourglass turns the screen into a big stopwatch with a stop button. During a session, rests are counted and summarised when the session stops; outside a session they are not kept.
 - **Session summary.** Stopping a session shows, and stores as plain text: duration, sets, exercises, volume, rest count / total / average / longest, and every exercise's sets. The same sheet has a **Back up** button and says how long ago the last backup was.
@@ -75,7 +76,7 @@ Sheet `sets`, one row per set:
 | date | time | exercise | group | set_no | reps | seconds | kg | volume_kg | session | exercise_id |
 |---|---|---|---|---|---|---|---|---|---|---|
 
-`set_no` counts within the day and exercise. `volume_kg` is reps × kg. Sheets `sessions` (date, start, end, minutes, summary) and `notes` come with it.
+`set_no` counts within the day and exercise. `volume_kg` is reps × kg. Sheets `activities` (date, time, activity, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
 
 ## Development
 
@@ -87,6 +88,7 @@ npm run dev          # http://localhost:5173, also on the LAN (--host)
 npm test             # unit tests (vitest + fake-indexeddb)
 npx playwright install webkit chromium   # once
 npm run test:e2e     # builds, serves the build, runs on iPhone 15 profiles (WebKit and Chromium)
+npm run test:recaps  # renders a fixture session over every background into recap-samples/
 npm run build        # dist/, with service worker and icons
 ```
 

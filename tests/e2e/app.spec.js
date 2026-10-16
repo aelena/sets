@@ -146,3 +146,34 @@ test('summary offers a backup and a shareable recap image', async ({ page }) => 
   const [shot] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Share', exact: true }).click()])
   expect(shot.suggestedFilename()).toMatch(/^sets-recap-\d{4}-\d\d-\d\d\.jpg$/)
 })
+
+test('log running from duration and pace, an other activity, both in the summary', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log activity: Running' }).click()
+  await page.getByLabel('Duration (min)').fill('30')
+  await page.getByLabel('Pace (min/km)').fill("6'")
+  await expect(page.getByLabel('Distance (km)')).toHaveValue('5')
+  await expect(page.getByTestId('activity-preview')).toHaveText('30 min · 5 km · 6:00/km')
+  await page.getByRole('button', { name: 'Log activity', exact: true }).click()
+  await expect(page.getByRole('button', { name: '30 min · 5 km · 6:00/km' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Other activity…' }).click()
+  await page.getByLabel('Activity name').fill('Swimming')
+  await page.getByLabel('Duration (min)').fill('40')
+  await page.getByRole('button', { name: 'Log activity', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Log activity: Swimming' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '40 min', exact: true })).toBeVisible()
+
+  // editing an entry: change the distance, pace follows
+  await page.getByRole('button', { name: '30 min · 5 km · 6:00/km' }).click()
+  await page.getByLabel('Distance (km)').fill('6')
+  await expect(page.getByLabel('Pace (min/km)')).toHaveValue('5:00')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('button', { name: '30 min · 6 km · 5:00/km' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  const summary = page.getByTestId('summary')
+  await expect(summary).toContainText('0 sets · 0 exercises · 2 activities')
+  await expect(summary).toContainText('Running: 30 min · 6 km · 5:00/km')
+  await expect(summary).toContainText('Swimming: 40 min')
+})

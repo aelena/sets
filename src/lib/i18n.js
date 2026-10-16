@@ -33,6 +33,12 @@ const en = {
   last: 'last', best: 'Personal best', bests: 'personal bests', bestOne: 'personal best', daysAgo: '{d} days ago', todayLower: 'today',
   shareImage: 'Share image', recap: 'Session recap', story: 'Story 9:16', post: 'Post 4:5', background: 'Background',
   fromPhotos: 'From Photos', share: 'Share', rests: 'rests', moreExercises: '+{n} more', pitch: 'free · no App Store',
+  activities: 'activities', activity: 'Activity', otherActivity: 'Other activity…', activityName: 'Activity name',
+  duration: 'Duration (min)', distance: 'Distance (km)', pace: 'Pace (min/km)', paceHint: `e.g. 6, 6:00 or 6'30"`,
+  fillTwo: 'Fill any two: the third is worked out.', activityNotes: 'Notes (optional)', logActivity: 'Log activity',
+  nothingMeasured: 'Enter a duration or a distance.', m_minutes: 'Minutes', m_km: 'Kilometres', m_pace: 'Pace (min/km)',
+  ms_minutes: 'Minutes', ms_km: 'km', ms_pace: 'Pace', rename: 'Rename', entries: 'Entries',
+  confirmDeleteActivity: 'Remove this activity? If it has history it is archived and the history stays.',
 }
 
 const es = {
@@ -67,6 +73,12 @@ const es = {
   last: 'última', best: 'Récord personal', bests: 'récords', bestOne: 'récord', daysAgo: 'hace {d} días', todayLower: 'hoy',
   shareImage: 'Compartir imagen', recap: 'Resumen en imagen', story: 'Historia 9:16', post: 'Post 4:5', background: 'Fondo',
   fromPhotos: 'De Fotos', share: 'Compartir', rests: 'descansos', moreExercises: '+{n} más', pitch: 'gratis · sin App Store',
+  activities: 'actividades', activity: 'Actividad', otherActivity: 'Otra actividad…', activityName: 'Nombre de la actividad',
+  duration: 'Duración (min)', distance: 'Distancia (km)', pace: 'Ritmo (min/km)', paceHint: `p. ej. 6, 6:00 o 6'30"`,
+  fillTwo: 'Rellena dos cualesquiera: el tercero se calcula.', activityNotes: 'Notas (opcional)', logActivity: 'Anotar actividad',
+  nothingMeasured: 'Indica una duración o una distancia.', m_minutes: 'Minutos', m_km: 'Kilómetros', m_pace: 'Ritmo (min/km)',
+  ms_minutes: 'Minutos', ms_km: 'km', ms_pace: 'Ritmo', rename: 'Renombrar', entries: 'Entradas',
+  confirmDeleteActivity: '¿Quitar esta actividad? Si tiene historial se archiva y el historial se conserva.',
 }
 
 export const dictionaries = { en, es }
@@ -79,4 +91,4 @@ export const t = derived(settings, $s => {
 
 /** Words baked into a stored session summary. */
 export const summaryWords = tr =>
-  Object.fromEntries(['sets', 'exercises', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)]))
+  Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)]))

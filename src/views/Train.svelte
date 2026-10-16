@@ -1,7 +1,7 @@
 <script>
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
-  import { db, repo, groups, exercises, activeSession, setCount, now, shownSummary } from '../lib/store.js'
+  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
   import { lastDay, personalBests } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords } from '../lib/i18n.js'
@@ -11,9 +11,12 @@
   import ExerciseRow from '../components/ExerciseRow.svelte'
   import LogSheet from '../components/LogSheet.svelte'
   import NotesSheet from '../components/NotesSheet.svelte'
+  import ActivitySheet from '../components/ActivitySheet.svelte'
+  import { activityLabel } from '../lib/activity.js'
 
   let logging = $state(null) // { exercise, set? }
   let notesOpen = $state(false)
+  let doing = $state(null) // { activity | null, log?, last? }
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
@@ -39,6 +42,15 @@
     return out
   })
   const empty = { today: [], last: null, bests: new Set() }
+
+  const perActivity = $derived.by(() => {
+    const out = {}
+    for (const a of $activities ?? []) {
+      const mine = ($activityLogs ?? []).filter(l => l.activityId === a.id).sort((x, y) => x.ts - y.ts)
+      out[a.id] = { today: mine.filter(l => l.date === todayKey), last: mine.filter(l => l.date < todayKey).at(-1) ?? null }
+    }
+    return out
+  })
 
   const today = $derived(new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format($now))
   const backupDays = $derived(daysSince($settings.lastBackup, $now))
@@ -97,6 +109,33 @@
       {/each}
     </ul>
   {/if}
+
+  <h2>{$t('activities')}</h2>
+  <ul class="list card">
+    {#each $activities ?? [] as a (a.id)}
+      {@const h = perActivity[a.id] ?? { today: [], last: null }}
+      <li class="activity">
+        <div class="row">
+          <div class="grow name">
+            <span class="aname">{a.name}</span>
+            {#if h.last}<span class="muted small" data-testid="activity-last">{$t('last')}: {activityLabel(h.last)}</span>{/if}
+          </div>
+          <button class="icon primary" aria-label="{$t('logActivity')}: {a.name}"
+            onclick={() => (doing = { activity: a, last: h.today.at(-1) ?? h.last })}><Icon name="plus" /></button>
+        </div>
+        {#if h.today.length}
+          <div class="chips">
+            {#each h.today as l (l.id)}
+              <button class="chip" onclick={() => (doing = { activity: a, log: l })}>{activityLabel(l)}</button>
+            {/each}
+          </div>
+        {/if}
+      </li>
+    {/each}
+    <li class="activity">
+      <button class="ghost other" onclick={() => (doing = { activity: null })}>{$t('otherActivity')}</button>
+    </li>
+  </ul>
 </main>
 
 {#if logging}
@@ -104,6 +143,7 @@
     done={(perExercise[logging.exercise.id] ?? empty).today} onclose={() => (logging = null)} />
 {/if}
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
+{#if doing}<ActivitySheet activity={doing.activity} log={doing.log} last={doing.last} onclose={() => (doing = null)} />{/if}
 
 <style>
   header {
@@ -120,4 +160,10 @@
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
+  .activity { padding: 6px 8px 6px 12px; }
+  .activity .name { display: grid; gap: 2px; }
+  .aname { font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 6px; }
+  .chip { min-height: 34px; padding: 0 10px; border-radius: 999px; font-size: 13px; background: var(--soft); }
+  .other { width: 100%; text-align: left; color: var(--muted); padding-left: 0; }
 </style>

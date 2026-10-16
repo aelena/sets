@@ -1,4 +1,5 @@
 import { duration, hhmm, dateKey } from './time.js'
+import { activityLabel } from './activity.js'
 
 /** What one logged set amounts to, in the exercise's own unit. */
 export const setLabel = s =>
@@ -10,7 +11,7 @@ export const volume = sets => sets.reduce((a, s) => a + (s.kg != null && s.reps 
  * The small text kept with each session once it is stopped.
  * `L` holds the localized words so the summary is written in the UI language of the moment.
  */
-export function buildSummary({ session, sets, rests, exercisesById, L }) {
+export function buildSummary({ session, sets, rests, exercisesById, L, activityLogs = [], activitiesById = {} }) {
   const end = session.end ?? Date.now()
   const order = []
   const byEx = new Map()
@@ -25,7 +26,7 @@ export function buildSummary({ session, sets, rests, exercisesById, L }) {
 
   const lines = [
     `${dateKey(session.start)} ${hhmm(session.start)} → ${hhmm(end)} · ${duration(end - session.start)}${session.auto ? ` (${L.autoClosed})` : ''}`,
-    [`${sets.length} ${L.sets}`, `${order.length} ${L.exercises}`, vol ? `${Math.round(vol)} kg ${L.volume}` : null].filter(Boolean).join(' · '),
+    [`${sets.length} ${L.sets}`, `${order.length} ${L.exercises}`, activityLogs.length ? `${activityLogs.length} ${L.activities}` : null, vol ? `${Math.round(vol)} kg ${L.volume}` : null].filter(Boolean).join(' · '),
   ]
   if (done.length)
     lines.push(`${L.rest}: ${done.length}× · ${duration(total)} ${L.total} · ${L.avg} ${duration(total / done.length)} · ${L.longest} ${duration(Math.max(...restMs))}`)
@@ -33,5 +34,7 @@ export function buildSummary({ session, sets, rests, exercisesById, L }) {
     const list = byEx.get(id)
     lines.push(`${exercisesById[id]?.name ?? id}: ${list.map(setLabel).join(', ')}`)
   }
+  for (const a of [...activityLogs].sort((x, y) => x.ts - y.ts))
+    lines.push(`${activitiesById[a.activityId]?.name ?? a.activityId}: ${activityLabel(a)}${a.notes ? ` (${a.notes})` : ''}`)
   return lines.join('\n')
 }

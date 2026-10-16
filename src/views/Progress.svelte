@@ -1,6 +1,7 @@
 <script>
   import { liveQuery } from 'dexie'
   import { db, exercises } from '../lib/store.js'
+  import { dailyActivity, formatPace, activityLabel } from '../lib/activity.js'
   import { t } from '../lib/i18n.js'
   import { settings } from '../lib/settings.js'
   import { daily, metricsFor } from '../lib/metrics.js'
@@ -16,31 +17,39 @@
   const sets = liveQuery(() => db.sets.toArray())
   const sessions = liveQuery(() => db.sessions.orderBy('start').reverse().toArray())
   const notes = liveQuery(() => db.notes.toArray())
+  const logs = liveQuery(() => db.activityLogs.toArray())
+  const allActivities = liveQuery(() => db.activities.toArray())
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
-  const withData = $derived([...new Set(($sets ?? []).map(s => s.exerciseId))].map(id => exById[id]).filter(Boolean)
-    .sort((a, b) => a.name.localeCompare(b.name)))
-  const ex = $derived(withData.find(e => e.id === exId) ?? withData[0])
-  const mine = $derived(($sets ?? []).filter(s => s.exerciseId === ex?.id))
-  const options = $derived(metricsFor(ex, mine))
+  const acById = $derived(Object.fromEntries(($allActivities ?? []).map(a => [a.id, a])))
+  // exercises and activities with anything logged, one picker; keys are prefixed so ids cannot collide
+  const withData = $derived([
+    ...[...new Set(($sets ?? []).map(s => s.exerciseId))].map(id => exById[id]).filter(Boolean).map(e => ({ key: `e:${e.id}`, name: e.name, exercise: e })),
+    ...[...new Set(($logs ?? []).map(l => l.activityId))].map(id => acById[id]).filter(Boolean).map(a => ({ key: `a:${a.id}`, name: a.name, activity: a })),
+  ].sort((a, b) => a.name.localeCompare(b.name)))
+  const ex = $derived(withData.find(e => e.key === exId) ?? withData[0])
+  const mine = $derived(ex?.exercise ? ($sets ?? []).filter(s => s.exerciseId === ex.exercise.id) : ($logs ?? []).filter(l => l.activityId === ex?.activity?.id))
+  const options = $derived(ex?.exercise ? metricsFor(ex.exercise, mine) : mine.some(l => l.km) ? ['minutes', 'km', 'pace'] : ['minutes'])
   const m = $derived(options.includes(metric) ? metric : options[0])
-  const days = $derived(daily(mine))
+  const days = $derived(ex?.exercise ? daily(mine) : dailyActivity(mine))
   const midnight = d => { const [y, mo, da] = d.split('-').map(Number); return new Date(y, mo - 1, da).getTime() }
-  const points = $derived(days.map(d => ({ x: midnight(d.date), y: d[m] ?? 0 })))
-  const unit = { volume: ' kg', maxKg: ' kg', seconds: 's', reps: '', sets: '' }
-  const fmt = v => `${Math.round(v * 10) / 10}${unit[m] ?? ''}`
+  const points = $derived(days.filter(d => d[m] != null).map(d => ({ x: midnight(d.date), y: d[m] })))
+  const unit = { volume: ' kg', maxKg: ' kg', seconds: 's', reps: '', sets: '', minutes: ' min', km: ' km' }
+  const fmt = v => (m === 'pace' ? (v ? `${formatPace(v)}/km` : '') : `${Math.round(v * 10) / 10}${unit[m] ?? ''}`)
 
   /** History: one entry per day with anything on it, newest first. */
   const history = $derived.by(() => {
     const byDate = new Map()
-    const day = d => byDate.get(d) ?? byDate.set(d, { date: d, sets: [], sessions: [], notes: [] }).get(d)
+    const day = d => byDate.get(d) ?? byDate.set(d, { date: d, sets: [], sessions: [], notes: [], logs: [] }).get(d)
     ;($sets ?? []).forEach(s => day(s.date).sets.push(s))
     ;($sessions ?? []).forEach(s => day(dateKey(s.start)).sessions.push(s))
     ;($notes ?? []).forEach(n => day(n.date).notes.push(n))
+    ;($logs ?? []).forEach(l => day(l.date).logs.push(l))
     return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 90).map(d => {
       const counts = new Map()
       d.sets.forEach(s => counts.set(s.exerciseId, (counts.get(s.exerciseId) ?? 0) + 1))
-      return { ...d, counts: [...counts].map(([id, n]) => `${exById[id]?.name ?? id} ×${n}`) }
+      return { ...d, counts: [...counts].map(([id, n]) => `${exById[id]?.name ?? id} ×${n}`)
+        .concat(d.logs.sort((a, b) => a.ts - b.ts).map(l => `${acById[l.activityId]?.name ?? l.activityId} ${activityLabel(l)}`)) }
     })
   })
   const longDate = d => new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(midnight(d))
@@ -59,8 +68,8 @@
     {:else}
       <div class="stack controls">
         <label>{$t('exercise')}
-          <select value={ex.id} onchange={e => (exId = e.currentTarget.value)}>
-            {#each withData as e (e.id)}<option value={e.id}>{e.name}</option>{/each}
+          <select value={ex.key} onchange={e => (exId = e.currentTarget.value)}>
+            {#each withData as e (e.key)}<option value={e.key}>{e.name}</option>{/each}
           </select>
         </label>
         <div class="segmented" role="group" aria-label={$t('metric')}>
@@ -68,12 +77,12 @@
         </div>
       </div>
       <h2>{ex.name} · {$t(`m_${m}`)}</h2>
-      {#key `${ex.id}|${m}`}<Chart {points} label={$t(`m_${m}`)} format={fmt} />{/key}
+      {#key `${ex.key}|${m}`}<Chart {points} label={$t(`m_${m}`)} format={fmt} />{/key}
       <table>
-        <thead><tr><th>{$t('day')}</th><th>{$t('m_sets')}</th><th>{$t(`m_${m}`)}</th></tr></thead>
+        <thead><tr><th>{$t('day')}</th><th>{ex.exercise ? $t('m_sets') : $t('entries')}</th><th>{$t(`m_${m}`)}</th></tr></thead>
         <tbody>
           {#each [...days].reverse().slice(0, 30) as d (d.date)}
-            <tr><td>{d.date}</td><td>{d.sets}</td><td>{fmt(d[m] ?? 0)}</td></tr>
+            <tr><td>{d.date}</td><td>{d.sets ?? d.entries}</td><td>{fmt(d[m] ?? 0)}</td></tr>
           {/each}
         </tbody>
       </table>

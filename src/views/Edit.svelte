@@ -1,5 +1,5 @@
 <script>
-  import { repo, groups, exercises, notify } from '../lib/store.js'
+  import { repo, groups, exercises, activities, notify } from '../lib/store.js'
   import { t } from '../lib/i18n.js'
   import Icon from '../components/Icon.svelte'
   import ExerciseForm from '../components/ExerciseForm.svelte'
@@ -88,6 +88,7 @@
     <div class="segmented">
       <button aria-pressed={seg === 'groups'} onclick={() => (seg = 'groups')}>{$t('groups')}</button>
       <button aria-pressed={seg === 'library'} onclick={() => (seg = 'library')}>{$t('library')}</button>
+      <button aria-pressed={seg === 'activities'} onclick={() => (seg = 'activities')}>{$t('activity')}</button>
     </div>
     {#if seg === 'groups'}
       <ul class="list card items">
@@ -102,6 +103,18 @@
         {/each}
       </ul>
       <button class="add-btn" onclick={newGroup}>{$t('newGroup')}</button>
+    {:else if seg === 'activities'}
+      <ul class="list card items">
+        {#each $activities ?? [] as a (a.id)}
+          <li class="row">
+            <input class="grow plain" value={a.name} aria-label="{$t('rename')}: {a.name}"
+              onchange={e => repo.renameActivity(a.id, e.currentTarget.value)} />
+            <button class="icon ghost danger" aria-label="{$t('remove')}: {a.name}"
+              onclick={() => confirm($t('confirmDeleteActivity')) && repo.deleteActivity(a.id)}><Icon name="x" /></button>
+          </li>
+        {/each}
+      </ul>
+      <p class="muted small">{$t('otherActivity')} → {$t('train')}</p>
     {:else}
       <ul class="list card items">
         {#each library as e (e.id)}
@@ -120,4 +133,5 @@
   .full { width: 100%; }
   .add { margin-top: 16px; }
   .add-btn { width: 100%; margin-top: 12px; }
+  .plain { border-color: transparent; background: transparent; }
 </style>

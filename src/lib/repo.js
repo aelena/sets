@@ -2,6 +2,7 @@ import { normalizeConfig, mergeConfig, exportConfig, cleanExercise, BACKUP_FORMA
 import { buildSummary } from './summary.js'
 import { seedConfig } from './seed.js'
 import { dateKey, uid, slugify } from './time.js'
+import { resolve, DEFAULT_ACTIVITIES } from './activity.js'
 
 export const IDLE_CLOSE_MS = 2 * 60 * 60 * 1000
 
@@ -51,15 +52,21 @@ export const createRepo = (db, clock = () => Date.now()) => {
     if (!session) return null
     const rest = await activeRest()
     if (rest && !rest.end) await db.rests.update(rest.id, { end: Math.min(end, clock()) })
-    const [sets, rests, exercises] = await Promise.all([
+    const [sets, rests, exercises, activityLogs, activities] = await Promise.all([
       db.sets.where('sessionId').equals(session.id).toArray(),
       db.rests.where('sessionId').equals(session.id).toArray(),
       db.exercises.toArray(),
+      db.activityLogs.where('sessionId').equals(session.id).toArray(),
+      db.activities.toArray(),
     ])
     const done = rests.filter(r => r.end)
     // rests are dropped below; their count and time survive here for the recap image
     const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0) } }
-    closed.summary = buildSummary({ session: closed, sets, rests, exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])), L })
+    closed.summary = buildSummary({
+      session: closed, sets, rests, L, activityLogs,
+      exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])),
+      activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
+    })
     await db.transaction('rw', db.sessions, db.rests, async () => {
       await db.sessions.put(closed)
       await db.rests.where('sessionId').equals(session.id).delete()
@@ -73,7 +80,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
     if (!session) return null
     const lastSet = await db.sets.where('sessionId').equals(session.id).reverse().sortBy('ts').then(a => a[0])
     const lastRest = await activeRest()
-    const last = Math.max(session.start, lastSet?.ts ?? 0, lastRest?.end ?? lastRest?.start ?? 0)
+    const lastActivity = await db.activityLogs.where('sessionId').equals(session.id).reverse().sortBy('ts').then(a => a[0])
+    const last = Math.max(session.start, lastSet?.ts ?? 0, lastActivity?.ts ?? 0, lastRest?.end ?? lastRest?.start ?? 0)
     if (clock() - last < idle) return null
     return stopSession(L, { end: last, auto: true })
   }
@@ -104,6 +112,39 @@ export const createRepo = (db, clock = () => Date.now()) => {
   }
   const updateNote = (id, text) => db.notes.update(id, { text: text.trim() })
   const deleteNote = id => db.notes.delete(id)
+
+  /** An activity by name: the existing one (case-insensitive, un-archived if needed) or a new one. */
+  async function ensureActivity(name) {
+    const clean = name.trim()
+    const all = await db.activities.toArray()
+    const hit = all.find(a => a.name.toLowerCase() === clean.toLowerCase())
+    if (hit) { if (hit.archived) await db.activities.update(hit.id, { archived: false }); return { ...hit, archived: false } }
+    const taken = new Set(all.map(a => a.id))
+    let id = slugify(clean), n = 2
+    while (taken.has(id)) id = `${slugify(clean)}-${n++}`
+    const activity = { id, name: clean, archived: false }
+    await db.activities.add(activity)
+    return activity
+  }
+
+  /** Any two of minutes / km / pace; the third is derived. Returns the new log's id, or null when nothing was measured. */
+  async function logActivity({ activityId, minutes, km, pace, notes = '' }) {
+    const values = resolve({ minutes, km, pace })
+    if (values.minutes == null && values.km == null) return null
+    const ts = clock()
+    const session = await activeSession()
+    return db.activityLogs.add({ ts, date: dateKey(ts), activityId, sessionId: session?.id ?? null, ...values, notes: notes.trim() })
+  }
+  const updateActivityLog = (id, { minutes, km, pace, notes = '' }) => db.activityLogs.update(id, { ...resolve({ minutes, km, pace }), notes: notes.trim() })
+  const deleteActivityLog = id => db.activityLogs.delete(id)
+  const restoreActivityLog = row => db.activityLogs.put(row)
+  const renameActivity = (id, name) => name.trim() && db.activities.update(id, { name: name.trim() })
+
+  /** Like exercises: archived when it has history, deleted otherwise. */
+  async function deleteActivity(id) {
+    const used = await db.activityLogs.where('activityId').equals(id).count()
+    return used ? db.activities.update(id, { archived: true }) : db.activities.delete(id)
+  }
 
   async function saveExercise(raw) {
     const known = await db.exercises.toArray()
@@ -158,28 +199,35 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   const configFile = async () => exportConfig(await library())
 
+  const everything = async () => {
+    const [lib, sets, sessions, notes, activities, activityLogs] = await Promise.all([
+      library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray(), db.activities.toArray(), db.activityLogs.toArray(),
+    ])
+    return { ...lib, sets, sessions, notes, activities, activityLogs }
+  }
+
   async function backup(settings = {}) {
-    const [lib, sets, sessions, notes] = await Promise.all([library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray()])
-    return { format: BACKUP_FORMAT, version: 1, exportedAt: new Date(clock()).toISOString(), settings, ...lib, sets, sessions, notes }
+    return { format: BACKUP_FORMAT, version: 2, exportedAt: new Date(clock()).toISOString(), settings, ...(await everything()) }
   }
 
   async function restore(json) {
     if (json?.format !== BACKUP_FORMAT) throw new Error('Not a full backup file')
-    await db.transaction('rw', [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes], async () => {
-      await Promise.all([db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes].map(t => t.clear()))
+    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs]
+    await db.transaction('rw', tables, async () => {
+      await Promise.all(tables.map(t => t.clear()))
       await db.exercises.bulkPut(json.exercises ?? [])
       await db.groups.bulkPut(json.groups ?? [])
       await db.sets.bulkPut(json.sets ?? [])
       await db.sessions.bulkPut(json.sessions ?? [])
       await db.notes.bulkPut(json.notes ?? [])
+      // v1 backups predate activities: keep the defaults rather than an empty list
+      await db.activities.bulkPut(json.activities ?? DEFAULT_ACTIVITIES)
+      await db.activityLogs.bulkPut(json.activityLogs ?? [])
     })
     return json.settings ?? {}
   }
 
-  async function exportData() {
-    const [lib, sets, sessions, notes] = await Promise.all([library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray()])
-    return { ...lib, sets, sessions, notes }
-  }
+  const exportData = everything
 
   return {
     db, library, seedIfEmpty, logSet, updateSet, deleteSet, restoreSet,
@@ -187,5 +235,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
+    ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

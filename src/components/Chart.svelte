@@ -3,13 +3,17 @@
   import 'uplot/dist/uPlot.min.css'
   import { settings } from '../lib/settings.js'
 
-  /** One series over time. `points`: [{ x: epoch ms (local midnight), y }]. */
-  let { points, label, format = v => String(v) } = $props()
+  /**
+   * One series over time, one axis. `points`: [{ x: epoch ms, y }].
+   * kind 'line' (default) or 'bar'; `step` is the spacing of the x values in days (7 for weekly bars),
+   * `when` formats the hovered x for the readout.
+   */
+  let { points, label, format = v => String(v), kind = 'line', step = 1, when = null } = $props()
   const DAY = 86400
   // from the data, not uPlot's arguments: with one point uPlot widens the span by years
   const xRange = () => {
     const xs = points.map(p => p.x / 1000), lo = Math.min(...xs), hi = Math.max(...xs)
-    const pad = DAY * (hi - lo < 2 * DAY ? 3 : 0.5)
+    const pad = kind === 'bar' ? DAY * step * 0.6 : DAY * (hi - lo < 2 * DAY ? 3 : 0.5)
     return [lo - pad, hi + pad]
   }
   let el = $state()
@@ -25,13 +29,19 @@
     const v = name => css.getPropertyValue(name).trim()
     const font = `12px ${v('--font')}`
     const axis = { stroke: v('--muted'), font, grid: { stroke: v('--line'), width: 1 }, ticks: { show: false } }
+    const series = kind === 'bar'
+      ? { label, fill: v('--accent'), stroke: v('--accent'), width: 0, paths: uPlot.paths.bars({ size: [0.6, 36], radius: 0.25 }), points: { show: false } }
+      : { label, stroke: v('--accent'), width: 2, points: { show: true, size: 8, fill: v('--accent'), stroke: v('--card') } }
     const plot = new uPlot({
-      width: el.clientWidth, height: 220,
+      width: el.clientWidth, height: 200,
       legend: { show: false },
-      cursor: { y: false, points: { size: 10 } },
+      cursor: { y: false, points: { size: kind === 'bar' ? 0 : 10 } },
       scales: { x: { time: true, range: () => xRange() }, y: { range: (u, min, max) => [0, max ? max * 1.15 : 1] } },
-      axes: [{ ...axis, space: 60, incrs: [1, 2, 7, 14, 30, 91, 182, 365].map(d => d * DAY), values: (u, ticks) => ticks.map(t => fmtDate(t * 1000)) }, { ...axis, size: 48 }],
-      series: [{}, { label, stroke: v('--accent'), width: 2, points: { show: true, size: 8, fill: v('--accent'), stroke: v('--card') } }],
+      axes: [
+        { ...axis, space: 56, incrs: [1, 2, 7, 14, 28, 91, 182, 365].map(d => d * DAY), values: (u, ticks) => ticks.map(t => fmtDate(t * 1000)) },
+        { ...axis, size: 40, incrs: [1, 2, 5, 10, 15, 30, 60, 120] },
+      ],
+      series: [{}, series],
       hooks: {
         setCursor: [u => {
           const i = u.cursor.idx
@@ -39,19 +49,19 @@
         }],
       },
     }, [points.map(p => p.x / 1000), points.map(p => p.y)], el)
-    const ro = new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: 220 }))
+    const ro = new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: 200 }))
     ro.observe(el)
     return () => { ro.disconnect(); plot.destroy() }
   })
 </script>
 
 {#if shown}
-  <div class="readout" aria-live="polite"><strong>{format(shown.y)}</strong> <span class="muted">{fmtDate(shown.x)}</span></div>
+  <div class="readout" aria-live="polite"><strong>{format(shown.y)}</strong> <span class="muted">{when ? when(shown.x) : fmtDate(shown.x)}</span></div>
 {/if}
 <div bind:this={el} class="chart"></div>
 
 <style>
   .readout { font-size: 20px; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
   .readout span { font-size: 14px; }
-  .chart { width: 100%; min-height: 220px; touch-action: pan-y; }
+  .chart { width: 100%; min-height: 200px; touch-action: pan-y; }
 </style>

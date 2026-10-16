@@ -1,6 +1,6 @@
 <script>
   import { liveQuery } from 'dexie'
-  import { db, exercises } from '../lib/store.js'
+  import { db, exercises, groups } from '../lib/store.js'
   import { dailyActivity, formatPace, activityLabel } from '../lib/activity.js'
   import { t } from '../lib/i18n.js'
   import { settings } from '../lib/settings.js'
@@ -9,9 +9,10 @@
   import Chart from '../components/Chart.svelte'
   import RecapSheet from '../components/RecapSheet.svelte'
   import Calendar from '../components/Calendar.svelte'
+  import Overview from '../components/Overview.svelte'
   import { nameOf, nameById } from '../lib/names.js'
 
-  let seg = $state('charts')
+  let seg = $state('overview')
   let exId = $state(null)
   let metric = $state(null)
   let recapFor = $state(null)
@@ -81,13 +82,16 @@
 
 <main class="view">
   <h1 class="page-title">{$t('progress')}</h1>
-  <div class="segmented">
+  <div class="segmented tabs">
+    <button aria-pressed={seg === 'overview'} onclick={() => (seg = 'overview')}>{$t('overview')}</button>
     <button aria-pressed={seg === 'charts'} onclick={() => (seg = 'charts')}>{$t('charts')}</button>
     <button aria-pressed={seg === 'calendar'} onclick={() => (seg = 'calendar')}>{$t('calendar')}</button>
     <button aria-pressed={seg === 'history'} onclick={() => (seg = 'history')}>{$t('history')}</button>
   </div>
 
-  {#if seg === 'charts'}
+  {#if seg === 'overview'}
+    <Overview sets={$sets ?? []} sessions={$sessions ?? []} logs={$logs ?? []} {exById} groups={$groups ?? []} />
+  {:else if seg === 'charts'}
     {#if !ex}
       <p class="muted">{$t('noData')}</p>
     {:else}
@@ -125,6 +129,8 @@
 {#if recapFor}<RecapSheet session={recapFor} onclose={() => (recapFor = null)} />{/if}
 
 <style>
+  /* four segments must fit a 375pt-wide phone */
+  .tabs button { min-width: 0; padding: 0 4px; font-size: 13px; }
   .controls { margin-top: 12px; }
   .controls .segmented button { font-size: 12px; }
   table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; font-variant-numeric: tabular-nums; }

@@ -48,6 +48,10 @@ const en = {
   driveAuto: 'Upload each session when it stops', drive: 'Google Drive', driveWaiting: 'Connecting to Google…',
   todayOnly: 'Only what I did today', todayOnlyOn: 'Today: everything logged so far, all groups', nothingToday: 'Nothing logged today yet. Tap ✓ to go back to the groups.',
   activitiesTab: 'Cardio & more', nameEs: 'Name in Spanish',
+  overview: 'Overview', sinceLast: 'Since you last trained', yesterday: 'yesterday', st_due: 'a week', st_stale: 'stale',
+  notYet: 'Not trained yet', sessionsPerWeek: 'Sessions per week', avgPerWeek: 'avg {n} per week (last 4 weeks)',
+  trainingDaysAvg: '{n} training days per week', showTable: 'Show as a table', week: 'Week', trainingDays: 'Training days',
+  sessionLength: 'Session length', avgLength: 'avg {n} min over the last {k}', weekOf: 'week of {d}',
 }
 
 const es = {
@@ -97,6 +101,10 @@ const es = {
   driveAuto: 'Subir cada sesión al terminarla', drive: 'Google Drive', driveWaiting: 'Conectando con Google…',
   todayOnly: 'Solo lo de hoy', todayOnlyOn: 'Hoy: todo lo anotado hasta ahora, de todos los grupos', nothingToday: 'Aún no hay nada anotado hoy. Pulsa ✓ para volver a los grupos.',
   activitiesTab: 'Cardio y más', nameEs: 'Nombre en español',
+  overview: 'Resumen', sinceLast: 'Desde la última vez', yesterday: 'ayer', st_due: 'una semana', st_stale: 'abandonado',
+  notYet: 'Aún sin entrenar', sessionsPerWeek: 'Sesiones por semana', avgPerWeek: 'media {n} por semana (últimas 4)',
+  trainingDaysAvg: '{n} días de entreno por semana', showTable: 'Ver como tabla', week: 'Semana', trainingDays: 'Días de entreno',
+  sessionLength: 'Duración de la sesión', avgLength: 'media {n} min en las últimas {k}', weekOf: 'semana del {d}',
 }
 
 export const dictionaries = { en, es }

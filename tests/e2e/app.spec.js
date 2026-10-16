@@ -60,6 +60,7 @@ test('session with a rest ends in a summary', async ({ page }) => {
   await page.getByRole('button', { name: 'Close' }).last().click()
 
   await page.getByRole('button', { name: 'Progress' }).click()
+  await page.getByRole('button', { name: 'Charts' }).click() // Progress opens on Overview
   await expect(page.locator('.chart canvas')).toBeVisible()
   await page.getByRole('button', { name: 'History' }).click()
   await expect(page.getByText(/^Session \d\d:\d\d/)).toBeVisible()
@@ -277,4 +278,34 @@ test('Spanish UI shows Spanish names; the activities tab sits after the groups',
   await expect(page.locator('.title').first()).toHaveText('Peso muerto')
   await page.getByRole('tab', { name: 'Cardio y más' }).click()
   await expect(page.locator('.aname')).toHaveText(['Bici estática', 'Remo', 'Correr'])
+})
+
+test('Overview: days since each muscle, sessions per week, session length', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 9, 6, 18, 0)) // ten days before "today"
+  await page.reload()
+  await page.getByRole('tab', { name: 'Leg Day' }).click()
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Back Squat', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.clock.setFixedTime(new Date(2026, 9, 6, 18, 45))
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  await page.clock.setFixedTime(new Date(2026, 9, 16, 18, 0))
+  await page.reload()
+  await page.getByRole('tab', { name: 'Kettlebell Supergroup' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Progress' }).click()
+  const rows = page.getByTestId('recency').locator('li')
+  const quads = rows.filter({ hasText: 'Quads' })
+  await expect(quads).toContainText('10 days ago')
+  await expect(quads).toContainText('a week')
+  await expect(rows.first()).toContainText('10 days ago') // most stale first
+  await expect(page.getByTestId('recency')).toContainText('Kettlebell Supergroup')
+  await expect(page.getByTestId('recency')).toContainText('today')
+  await expect(page.getByTestId('avg-length')).toHaveText('avg 45 min over the last 1')
+  await expect(page.locator('.chart canvas')).toHaveCount(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize().width)
 })

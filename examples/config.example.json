@@ -1,0 +1,205 @@
+{
+  "format": "exercise-tracker/config",
+  "version": 1,
+  "exercises": [
+    {
+      "id": "chest-thrusts",
+      "name": "Chest Thrusts",
+      "type": "reps",
+      "sets": 2,
+      "reps": 50,
+      "kg": 16
+    },
+    {
+      "id": "round-the-worlds",
+      "name": "Round the Worlds",
+      "type": "reps",
+      "sets": 2,
+      "reps": 50,
+      "kg": 16
+    },
+    {
+      "id": "halos",
+      "name": "Halos",
+      "type": "reps",
+      "sets": 5,
+      "reps": 10,
+      "kg": 16
+    },
+    {
+      "id": "lateral-swing",
+      "name": "Lateral Swing",
+      "type": "reps",
+      "sets": 2,
+      "reps": 50,
+      "kg": 20
+    },
+    {
+      "id": "forward-swing",
+      "name": "Forward Swing",
+      "type": "reps",
+      "sets": 2,
+      "reps": 50,
+      "kg": 20
+    },
+    {
+      "id": "chest-to-sky",
+      "name": "Chest to Sky",
+      "type": "reps",
+      "sets": 3,
+      "reps": 15,
+      "kg": 16
+    },
+    {
+      "id": "over-the-shoulder",
+      "name": "Over the Shoulder",
+      "type": "reps",
+      "sets": 5,
+      "reps": 10,
+      "kg": 16
+    },
+    {
+      "id": "3-phase-supercurl",
+      "name": "3-phase supercurl",
+      "type": "reps",
+      "sets": 3,
+      "reps": 10,
+      "kg": 16
+    },
+    {
+      "id": "overhead-march",
+      "name": "Overhead March",
+      "type": "reps",
+      "sets": 2,
+      "reps": 25,
+      "kg": 16
+    },
+    {
+      "id": "overhand-row",
+      "name": "Overhand Row",
+      "type": "reps",
+      "sets": 2,
+      "reps": 25,
+      "kg": 16
+    },
+    {
+      "id": "upright-row",
+      "name": "Upright Row",
+      "type": "reps",
+      "sets": 2,
+      "reps": 25,
+      "kg": 16
+    },
+    {
+      "id": "torso-twists",
+      "name": "Torso Twists",
+      "type": "reps",
+      "sets": 4,
+      "reps": 25,
+      "kg": 16
+    },
+    {
+      "id": "arm-superseries",
+      "name": "Arm superseries",
+      "type": "reps",
+      "sets": 3,
+      "reps": 5,
+      "kg": 10,
+      "desc": "La superserie de curls, antebrazos y hombro."
+    },
+    {
+      "id": "disc-routine",
+      "name": "Disc routine",
+      "type": "reps",
+      "sets": 2,
+      "reps": 1,
+      "kg": 10,
+      "desc": "Superserie con disco a frente, lateral y halos: 1, 1, 1, 2, 2, 3."
+    },
+    {
+      "id": "push-ups",
+      "name": "Push ups",
+      "type": "reps",
+      "sets": 3,
+      "reps": 20
+    },
+    {
+      "id": "pull-ups",
+      "name": "Pull ups",
+      "type": "reps",
+      "sets": 3,
+      "reps": 8,
+      "link": "https://www.youtube.com/results?search_query=pull+up+technique"
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "type": "time",
+      "sets": 3,
+      "seconds": 60
+    },
+    {
+      "id": "dead-hang",
+      "name": "Dead hang",
+      "type": "time",
+      "sets": 2,
+      "seconds": 45
+    },
+    {
+      "id": "mountain-climbers",
+      "name": "Mountain climbers",
+      "type": "time",
+      "sets": 3,
+      "seconds": 30
+    },
+    {
+      "id": "lunges",
+      "name": "Lunges",
+      "type": "reps",
+      "sets": 3,
+      "reps": 12,
+      "perSide": true
+    }
+  ],
+  "groups": [
+    {
+      "id": "kettlebell-supergroup",
+      "name": "Kettlebell Supergroup",
+      "exercises": [
+        "chest-thrusts",
+        "round-the-worlds",
+        "halos",
+        "lateral-swing",
+        "forward-swing",
+        "chest-to-sky",
+        "over-the-shoulder",
+        "3-phase-supercurl",
+        "overhead-march",
+        "overhand-row",
+        "upright-row",
+        "torso-twists"
+      ]
+    },
+    {
+      "id": "my-warm-up-routine",
+      "name": "My Warm up Routine",
+      "exercises": [
+        "arm-superseries",
+        "disc-routine"
+      ]
+    },
+    {
+      "id": "home-bodyweight",
+      "name": "Home bodyweight",
+      "exercises": [
+        "push-ups",
+        "pull-ups",
+        "plank",
+        "dead-hang",
+        "mountain-climbers",
+        "lunges",
+        "halos"
+      ]
+    }
+  ]
+}

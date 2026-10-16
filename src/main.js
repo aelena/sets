@@ -1,0 +1,15 @@
+import { mount } from 'svelte'
+import '@fontsource/jetbrains-mono/latin-400.css'
+import '@fontsource/jetbrains-mono/latin-700.css'
+import '@fontsource/ibm-plex-mono/latin-400.css'
+import '@fontsource/ibm-plex-mono/latin-700.css'
+import '@fontsource/victor-mono/latin-400.css'
+import '@fontsource/victor-mono/latin-700.css'
+import '@fontsource/fira-code/latin-400.css'
+import '@fontsource/fira-code/latin-700.css'
+import '@fontsource/space-mono/latin-400.css'
+import '@fontsource/space-mono/latin-700.css'
+import './app.css'
+import App from './App.svelte'
+
+export default mount(App, { target: document.getElementById('app') })

@@ -1,0 +1,14 @@
+# session journal and working notes stay local
+_memoria.md
+_memoria/
+specs.md
+# tooling
+graft/
+node_modules/
+dist/
+dev-dist/
+coverage/
+test-results/
+playwright-report/
+.env
+.env.*

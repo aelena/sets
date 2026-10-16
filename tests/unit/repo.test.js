@@ -1,0 +1,101 @@
+import 'fake-indexeddb/auto'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createDb } from '../../src/lib/db.js'
+import { createRepo, IDLE_CLOSE_MS } from '../../src/lib/repo.js'
+import { setRows } from '../../src/lib/export.js'
+import { daily } from '../../src/lib/metrics.js'
+
+const L = { sets: 'sets', exercises: 'exercises', volume: 'volume', rest: 'Rest', total: 'total', avg: 'avg', longest: 'longest', autoClosed: 'auto-closed' }
+let now, repo, n = 0
+const at = ms => { now = ms }
+const T0 = new Date(2026, 9, 16, 18, 0).getTime()
+const MIN = 60_000
+
+beforeEach(async () => {
+  now = T0
+  repo = createRepo(createDb(`test-${n++}`), () => now)
+  await repo.seedIfEmpty()
+})
+
+describe('repo', () => {
+  it('seeds once', async () => {
+    expect(await repo.seedIfEmpty()).toBe(false)
+    expect((await repo.library()).groups).toHaveLength(2)
+  })
+
+  it('logs ad-hoc sets with a date and no session', async () => {
+    const id = await repo.logSet({ exerciseId: 'halos', groupId: 'kettlebell-supergroup', reps: 10, kg: 16 })
+    const row = await repo.db.sets.get(id)
+    expect(row).toMatchObject({ date: '2026-10-16', sessionId: null, reps: 10, kg: 16 })
+  })
+
+  it('a session collects its sets and rests into a summary, then drops the rests', async () => {
+    const s = await repo.startSession()
+    at(T0 + 1 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    await repo.startRest()
+    at(T0 + 2.5 * MIN); await repo.stopRest()
+    at(T0 + 3 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 8, kg: 16 })
+    at(T0 + 4 * MIN); await repo.logSet({ exerciseId: 'disc-routine', reps: 1, kg: 10 })
+    at(T0 + 40 * MIN)
+    const closed = await repo.stopSession(L)
+    expect(closed.id).toBe(s.id)
+    expect(closed.summary).toContain('18:00 → 18:40 · 40m 00s')
+    expect(closed.summary).toContain('3 sets · 2 exercises · 298 kg volume')
+    expect(closed.summary).toContain('Rest: 1× · 1m 30s total')
+    expect(closed.summary).toContain('Halos: 10 @16kg, 8 @16kg')
+    expect(await repo.db.rests.count()).toBe(0)
+    expect(await repo.activeSession()).toBeNull()
+  })
+
+  it('rests outside a session are not kept', async () => {
+    await repo.startRest()
+    at(T0 + MIN)
+    const r = await repo.stopRest()
+    expect(r.end - r.start).toBe(MIN)
+    expect(await repo.db.rests.count()).toBe(0)
+  })
+
+  it('auto-closes a forgotten session at its last activity', async () => {
+    await repo.startSession()
+    at(T0 + 10 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 + 10 * MIN + IDLE_CLOSE_MS - 1)
+    expect(await repo.autoCloseStale(L)).toBeNull()
+    at(T0 + 10 * MIN + IDLE_CLOSE_MS)
+    const closed = await repo.autoCloseStale(L)
+    expect(closed.end).toBe(T0 + 10 * MIN)
+    expect(closed.summary).toContain('auto-closed')
+  })
+
+  it('archives exercises with history and removes them from groups', async () => {
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    await repo.deleteExercise('halos')
+    await repo.deleteExercise('upright-row')
+    expect((await repo.db.exercises.get('halos')).archived).toBe(true)
+    expect(await repo.db.exercises.get('upright-row')).toBeUndefined()
+    const kb = await repo.db.groups.get('kettlebell-supergroup')
+    expect(kb.exerciseIds).not.toContain('halos')
+    expect(kb.exerciseIds).toHaveLength(10)
+  })
+
+  it('backup restores to an identical store', async () => {
+    await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    await repo.addNote('  felt strong  ')
+    const file = await repo.backup({ userName: 'A' })
+    const other = createRepo(createDb(`test-${n++}`), () => now)
+    expect(await other.restore(JSON.parse(JSON.stringify(file)))).toEqual({ userName: 'A' })
+    expect((await other.backup({ userName: 'A' }))).toEqual(file)
+    expect((await other.db.notes.toArray())[0].text).toBe('felt strong')
+  })
+
+  it('exports flat rows with set numbers per day and exercise', async () => {
+    await repo.logSet({ exerciseId: 'halos', groupId: 'kettlebell-supergroup', reps: 10, kg: 16 })
+    at(T0 + MIN); await repo.logSet({ exerciseId: 'halos', groupId: 'kettlebell-supergroup', reps: 9, kg: 16 })
+    at(T0 + 24 * 60 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 20 })
+    const data = await repo.exportData()
+    const rows = setRows(data.sets, data)
+    expect(rows.map(r => [r.date, r.set_no, r.volume_kg])).toEqual([['2026-10-16', 1, 160], ['2026-10-16', 2, 144], ['2026-10-17', 1, 200]])
+    expect(rows[0]).toMatchObject({ exercise: 'Halos', group: 'Kettlebell Supergroup', time: '18:00' })
+    expect(daily(data.sets).map(d => [d.date, d.volume, d.maxKg])).toEqual([['2026-10-16', 304, 16], ['2026-10-17', 200, 20]])
+  })
+})

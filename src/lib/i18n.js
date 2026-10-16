@@ -1,0 +1,76 @@
+import { derived } from 'svelte/store'
+import { settings } from './settings.js'
+
+const en = {
+  train: 'Train', progress: 'Progress', edit: 'Edit', settings: 'Settings',
+  startSession: 'Start session', stopSession: 'Stop session', rest: 'Rest', notes: 'Notes',
+  session: 'Session', noGroups: 'No groups yet. Create one in Edit.', noExercises: 'This group has no exercises yet.',
+  sets: 'sets', set: 'Set', of: 'of', reps: 'reps', seconds: 'seconds', kg: 'kg', bodyweight: 'bodyweight', perSide: 'per side',
+  logSet: 'Log set', save: 'Save', delete: 'Delete', cancel: 'Cancel', close: 'Close', undo: 'Undo', copy: 'Copy', copied: 'Copied',
+  logged: 'Logged', deleted: 'Deleted', saved: 'Saved', today: 'Today', watch: 'Watch how',
+  restRunning: 'Resting', stopRest: 'Stop rest', restDone: 'Rest', restNoSession: 'Not in a session: this rest is not kept.',
+  summary: 'Session summary', exercises: 'exercises', volume: 'volume', total: 'total', avg: 'avg', longest: 'longest', autoClosed: 'auto-closed',
+  notePlaceholder: 'Ideas, thoughts, how it went… (tap the keyboard mic to dictate)', addNote: 'Add note', noteFor: 'Linked to', thisSession: 'this session', thisDay: 'today',
+  backupNever: 'No backup yet.', backupOld: 'Last backup {d} days ago.', backupNow: 'Back up',
+  charts: 'Charts', history: 'History', exercise: 'Exercise', metric: 'Metric', noData: 'Nothing logged yet.',
+  ms_volume: 'Volume', ms_maxKg: 'Max kg', ms_reps: 'Reps', ms_seconds: 'Seconds', ms_sets: 'Sets',
+  m_volume: 'Volume (kg × reps)', m_maxKg: 'Heaviest (kg)', m_reps: 'Total reps', m_seconds: 'Total seconds', m_sets: 'Sets',
+  day: 'Day', sessions: 'Sessions', adHoc: 'Outside sessions', running: 'running',
+  groups: 'Groups', library: 'Exercises', newGroup: 'New group', newExercise: 'New exercise', groupName: 'Group name',
+  addToGroup: 'Add exercise', addExisting: 'Add from library', remove: 'Remove', up: 'Up', down: 'Down', deleteGroup: 'Delete group',
+  confirmDeleteGroup: 'Delete this group? Exercises and their history stay.', inGroups: 'In groups',
+  name: 'Name', type: 'Measured in', typeReps: 'Reps', typeTime: 'Time', targetSets: 'Sets', targetReps: 'Reps', targetSeconds: 'Seconds',
+  weight: 'Weight (kg)', weightHint: 'Empty for bodyweight', description: 'Description', link: 'Video link',
+  confirmDeleteExercise: 'Remove this exercise? If it has logged sets it is archived and its history stays.',
+  userName: 'Your name', language: 'Language', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', font: 'Font',
+  data: 'Data', exportXlsx: 'Export sets to Excel (.xlsx)', exportConfig: 'Export exercise config (.json)', importConfig: 'Import exercise config (.json)',
+  backup: 'Full backup (.json)', restore: 'Restore full backup', merge: 'Merge', replace: 'Replace',
+  importHow: 'Merge adds and updates groups and exercises. Replace makes the groups exactly those in the file.',
+  confirmRestore: 'Restore replaces everything on this device with the backup. Continue?',
+  imported: 'Imported {g} groups, {e} exercises', restored: 'Backup restored', storage: 'Storage',
+  persisted: 'Persistent: iOS will not clear it', notPersisted: 'Not persistent yet: install to the home screen and back up often',
+  lastBackup: 'Last backup', never: 'never', about: 'About',
+}
+
+const es = {
+  train: 'Entrenar', progress: 'Progreso', edit: 'Editar', settings: 'Ajustes',
+  startSession: 'Empezar sesión', stopSession: 'Terminar sesión', rest: 'Descanso', notes: 'Notas',
+  session: 'Sesión', noGroups: 'Aún no hay grupos. Crea uno en Editar.', noExercises: 'Este grupo aún no tiene ejercicios.',
+  sets: 'series', set: 'Serie', of: 'de', reps: 'reps', seconds: 'segundos', kg: 'kg', bodyweight: 'peso corporal', perSide: 'por lado',
+  logSet: 'Anotar serie', save: 'Guardar', delete: 'Borrar', cancel: 'Cancelar', close: 'Cerrar', undo: 'Deshacer', copy: 'Copiar', copied: 'Copiado',
+  logged: 'Anotada', deleted: 'Borrada', saved: 'Guardado', today: 'Hoy', watch: 'Ver cómo',
+  restRunning: 'Descansando', stopRest: 'Terminar descanso', restDone: 'Descanso', restNoSession: 'Sin sesión: este descanso no se guarda.',
+  summary: 'Resumen de la sesión', exercises: 'ejercicios', volume: 'volumen', total: 'total', avg: 'media', longest: 'máx.', autoClosed: 'cerrada automáticamente',
+  notePlaceholder: 'Ideas, sensaciones, cómo ha ido… (pulsa el micro del teclado para dictar)', addNote: 'Añadir nota', noteFor: 'Asociada a', thisSession: 'esta sesión', thisDay: 'hoy',
+  backupNever: 'Aún no hay copia de seguridad.', backupOld: 'Última copia hace {d} días.', backupNow: 'Hacer copia',
+  charts: 'Gráficas', history: 'Historial', exercise: 'Ejercicio', metric: 'Medida', noData: 'Aún no hay nada anotado.',
+  ms_volume: 'Volumen', ms_maxKg: 'Máx. kg', ms_reps: 'Reps', ms_seconds: 'Segundos', ms_sets: 'Series',
+  m_volume: 'Volumen (kg × reps)', m_maxKg: 'Peso máximo (kg)', m_reps: 'Reps totales', m_seconds: 'Segundos totales', m_sets: 'Series',
+  day: 'Día', sessions: 'Sesiones', adHoc: 'Fuera de sesión', running: 'en curso',
+  groups: 'Grupos', library: 'Ejercicios', newGroup: 'Nuevo grupo', newExercise: 'Nuevo ejercicio', groupName: 'Nombre del grupo',
+  addToGroup: 'Añadir ejercicio', addExisting: 'Añadir de la biblioteca', remove: 'Quitar', up: 'Subir', down: 'Bajar', deleteGroup: 'Borrar grupo',
+  confirmDeleteGroup: '¿Borrar este grupo? Los ejercicios y su historial se conservan.', inGroups: 'En grupos',
+  name: 'Nombre', type: 'Se mide en', typeReps: 'Repeticiones', typeTime: 'Tiempo', targetSets: 'Series', targetReps: 'Reps', targetSeconds: 'Segundos',
+  weight: 'Peso (kg)', weightHint: 'Vacío si es peso corporal', description: 'Descripción', link: 'Enlace a vídeo',
+  confirmDeleteExercise: '¿Quitar este ejercicio? Si tiene series anotadas se archiva y su historial se conserva.',
+  userName: 'Tu nombre', language: 'Idioma', theme: 'Tema', themeSystem: 'Sistema', themeLight: 'Claro', themeDark: 'Oscuro', font: 'Fuente',
+  data: 'Datos', exportXlsx: 'Exportar series a Excel (.xlsx)', exportConfig: 'Exportar configuración (.json)', importConfig: 'Importar configuración (.json)',
+  backup: 'Copia de seguridad completa (.json)', restore: 'Restaurar copia completa', merge: 'Combinar', replace: 'Reemplazar',
+  importHow: 'Combinar añade y actualiza grupos y ejercicios. Reemplazar deja exactamente los grupos del fichero.',
+  confirmRestore: 'Restaurar sustituye todo lo que hay en este dispositivo por la copia. ¿Seguir?',
+  imported: 'Importados {g} grupos, {e} ejercicios', restored: 'Copia restaurada', storage: 'Almacenamiento',
+  persisted: 'Persistente: iOS no lo borrará', notPersisted: 'Aún no es persistente: instala en la pantalla de inicio y haz copias a menudo',
+  lastBackup: 'Última copia', never: 'nunca', about: 'Acerca de',
+}
+
+export const dictionaries = { en, es }
+
+/** $t('key', { n: 3 }) — falls back to English, then to the key itself. */
+export const t = derived(settings, $s => {
+  const d = dictionaries[$s.lang] ?? en
+  return (key, vars = {}) => (d[key] ?? en[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '')
+})
+
+/** Words baked into a stored session summary. */
+export const summaryWords = tr =>
+  Object.fromEntries(['sets', 'exercises', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)]))

@@ -1,0 +1,71 @@
+:root {
+  --bg: #fcfcfb; --card: #ffffff; --fg: #161616; --muted: #66665f; --line: #e3e3dd; --soft: #f1f1ec;
+  --accent: #1f5fbf; --accent-fg: #ffffff; --ok: #1a7f37; --danger: #c4222b;
+  --font: 'JetBrains Mono', ui-monospace, monospace;
+  --r: 10px; --tab-h: 60px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] {
+    --bg: #1a1a19; --card: #222221; --fg: #ececea; --muted: #9c9c95; --line: #33332f; --soft: #2a2a28;
+    --accent: #4a8ef0; --accent-fg: #0d0d0d; --ok: #3fb950; --danger: #ff6b6b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #1a1a19; --card: #222221; --fg: #ececea; --muted: #9c9c95; --line: #33332f; --soft: #2a2a28;
+  --accent: #4a8ef0; --accent-fg: #0d0d0d; --ok: #3fb950; --danger: #ff6b6b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.4;
+  -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior-y: none;
+}
+#app { min-height: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+/* iOS zooms into any field under 16px */
+input, select, textarea { font-size: 16px; }
+
+button {
+  min-height: 44px; padding: 0 14px; border-radius: var(--r); border: 1px solid var(--line);
+  background: var(--card); cursor: pointer; touch-action: manipulation;
+}
+button:disabled { opacity: .35; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 700; }
+button.danger { color: var(--danger); }
+button.icon { width: 44px; padding: 0; display: inline-grid; place-items: center; }
+button.ghost { border-color: transparent; background: transparent; }
+
+input, select, textarea {
+  width: 100%; min-height: 44px; padding: 8px 10px; border-radius: var(--r);
+  border: 1px solid var(--line); background: var(--card);
+}
+textarea { min-height: 120px; resize: vertical; }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+label > :is(input, select, textarea) { color: var(--fg); }
+a { color: var(--accent); }
+
+.view { padding: 0 16px calc(var(--tab-h) + env(safe-area-inset-bottom) + 24px); max-width: 640px; margin: 0 auto; }
+.page-title { padding: calc(env(safe-area-inset-top) + 14px) 0 10px; margin: 0; font-size: 20px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.grow { flex: 1; min-width: 0; }
+.stack { display: grid; gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+.list { list-style: none; margin: 0; padding: 0; }
+.list > li { border-bottom: 1px solid var(--line); }
+.list > li:last-child { border-bottom: 0; }
+
+.segmented { display: flex; background: var(--soft); border-radius: var(--r); padding: 3px; gap: 3px; }
+.segmented button { flex: 1; min-height: 38px; border: 0; background: transparent; }
+.segmented button[aria-pressed='true'] { background: var(--card); font-weight: 700; box-shadow: 0 1px 2px #0002; }
+h2 { font-size: 15px; margin: 22px 0 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+pre.summary { white-space: pre-wrap; margin: 0; font: inherit; font-size: 14px; }
+
+/* phones show a keypad; desktop spinners only add noise */
+input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+input[type='number']::-webkit-inner-spin-button, input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

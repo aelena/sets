@@ -1,5 +1,8 @@
 import { FORMATS, FLAME } from './recap.js'
 
+/** Printed on every recap so whoever sees it can find the app. */
+export const APP_URL = 'aelena.com/sets'
+
 /** Background photos bundled with the app: drop images in src/assets/backgrounds and rebuild. */
 export const PHOTOS = Object.entries(
   import.meta.glob('../assets/backgrounds/*.{jpg,jpeg,png,webp}', { eager: true, query: '?url', import: 'default' }),
@@ -55,6 +58,8 @@ export async function drawRecap(data, { format = 'story', background, family, la
     ctx.fillStyle = g
   }
   ctx.fillRect(0, 0, W, H)
+
+  if (background?.image) Object.assign(ctx, { shadowColor: 'rgba(0,0,0,.55)', shadowBlur: 14 }) // text over bright patches of a photo
 
   const pad = 88, inner = W - 2 * pad
   const white = 'rgba(255,255,255,.96)', dim = 'rgba(255,255,255,.7)', flameColor = '#ff8a4c'
@@ -127,8 +132,11 @@ export async function drawRecap(data, { format = 'story', background, family, la
     ctx.beginPath(); ctx.moveTo(pad, y - 56); ctx.lineTo(W - pad, y - 56); ctx.stroke()
   }
   for (const line of shown) {
+    // the name keeps at least half the row; the detail takes what is left
+    ctx.font = font(700, 36)
+    const nameW = Math.min(ctx.measureText(line.name).width, inner * 0.5) + (line.best ? 56 : 0)
     ctx.font = font(400, 32)
-    const detail = fit(ctx, line.detail, inner * 0.45)
+    const detail = fit(ctx, line.detail, inner - nameW - 32)
     const dw = ctx.measureText(detail).width
     ctx.fillStyle = dim
     ctx.fillText(detail, W - pad - dw, y)
@@ -146,9 +154,13 @@ export async function drawRecap(data, { format = 'story', background, family, la
   }
 
   const footer = H - (story ? 170 : pad)
-  ctx.fillStyle = 'rgba(255,255,255,.55)'
-  ctx.font = font(700, 28)
-  ctx.fillText('SET-TRACKER', pad, footer)
+  ctx.fillStyle = white
+  ctx.font = font(700, 34)
+  ctx.fillText(APP_URL, pad, footer)
+  const urlW = ctx.measureText(APP_URL).width
+  ctx.fillStyle = dim
+  ctx.font = font(400, 28)
+  ctx.fillText(fit(ctx, ` · ${L.pitch}`, inner - urlW), pad + urlW, footer)
   return canvas
 }
 

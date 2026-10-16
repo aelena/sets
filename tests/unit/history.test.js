@@ -35,9 +35,11 @@ describe('personalBests', () => {
 describe('compact', () => {
   it('collapses identical sets, keeps a shared weight once, spells out mixed weights', () => {
     expect(compact([set('d', 50, 16), set('d', 50, 16)])).toBe('2×50 @16kg')
-    expect(compact([set('d', 10, 16), set('d', 10, 16), set('d', 9, 16)])).toBe('10 · 10 · 9 @16kg')
+    expect(compact([set('d', 10, 16), set('d', 10, 16), set('d', 9, 16)])).toBe('2×10 · 9 @16kg')
     expect(compact([set('d', 8, 50), set('d', 6, 60)])).toBe('8@50 · 6@60')
     expect(compact([set('d', 20), set('d', 18)])).toBe('20 · 18')
+    expect(compact([5, 5, 5, 5, 4].map(r => set('d', r, 80)))).toBe('4×5 · 4 @80kg')
+    expect(compact([set('d', 8, 50), set('d', 8, 50), set('d', 6, 60)])).toBe('2×8@50 · 6@60')
     expect(compact([set('d', null, null, { seconds: 60 })])).toBe('1×60s')
   })
 })

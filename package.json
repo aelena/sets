@@ -12,12 +12,14 @@
     "preview": "vite preview --host",
     "icons": "pwa-assets-generator",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:recaps": "cross-env RECAPS=1 playwright test tests/e2e/recap.spec.js --project=iphone-webkit"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@vite-pwa/assets-generator": "^2.0.0",
+    "cross-env": "^10.1.0",
     "fake-indexeddb": "^6.2.5",
     "svelte": "^5.57.2",
     "vite": "^8.3.4",

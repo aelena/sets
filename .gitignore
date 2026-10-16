@@ -13,3 +13,6 @@ test-results/
 playwright-report/
 .env
 .env.*
+# full-size source photos; the app ships the compressed copies in src/assets/backgrounds
+img/*.png
+recap-samples/

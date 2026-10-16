@@ -39,7 +39,7 @@
   $effect(() => {
     const d = data, format = $settings.recapFormat, choice = bg, lang = $settings.lang, name = $settings.userName
     const family = FONTS[$settings.font] ?? FONTS['JetBrains Mono']
-    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }) }
+    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch') }
     picked // re-render when a new photo is picked
     if (!d) return
     const mine = ++run
@@ -65,7 +65,7 @@
 
   async function share() {
     busy = true
-    try { await deliver(blob, `set-tracker-${dateKey(session.start)}.jpg`) } finally { busy = false }
+    try { await deliver(blob, `sets-recap-${dateKey(session.start)}.jpg`) } finally { busy = false }
   }
 
   onDestroy(() => { if (preview) URL.revokeObjectURL(preview); if (picked) URL.revokeObjectURL(picked.url) })

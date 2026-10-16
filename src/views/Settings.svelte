@@ -17,9 +17,9 @@
   const fail = e => (error = e.message ?? String(e))
 
   async function exportXlsx() {
-    await deliver(await workbook(await repo.exportData()), `set-tracker-sets-${dateKey()}.xlsx`)
+    await deliver(await workbook(await repo.exportData()), `sets-log-${dateKey()}.xlsx`)
   }
-  const exportConfig = async () => deliver(jsonBlob(await repo.configFile()), `set-tracker-config-${dateKey()}.json`)
+  const exportConfig = async () => deliver(jsonBlob(await repo.configFile()), `sets-config-${dateKey()}.json`)
 
   async function chooseConfig(e) {
     error = ''

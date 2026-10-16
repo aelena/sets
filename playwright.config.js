@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test'
 // WebKit with an iPhone profile is the closest thing to iOS Safari that runs on a desktop.
 export default defineConfig({
   testDir: 'tests/e2e',
+  // recap.spec renders sample images; heavy, so only on request (npm run test:recaps)
+  testIgnore: process.env.RECAPS ? [] : ['**/recap.spec.js'],
   fullyParallel: true,
   workers: 4, // more parallel WebKit instances than this time out on a laptop
   reporter: 'list',

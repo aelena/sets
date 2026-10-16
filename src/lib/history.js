@@ -28,7 +28,18 @@ export function personalBests(sets) {
   return ids
 }
 
-/** "2×50 @16kg" when every set is the same, else "10 · 10 · 9 @16kg", per-set kg only when it varies. */
+/** Runs of equal values collapse: [10, 10, 9] → "2×10 · 9". */
+const runs = values => {
+  const out = []
+  for (const v of values) {
+    const last = out.at(-1)
+    if (last?.v === v) last.n++
+    else out.push({ v, n: 1 })
+  }
+  return out.map(({ v, n }) => (n > 1 ? `${n}×${v}` : v)).join(' · ')
+}
+
+/** "2×50 @16kg" when every set is the same, else "2×10 · 9 @16kg", per-set kg only when it varies. */
 export function compact(sets) {
   if (!sets.length) return ''
   const unit = s => (s.seconds != null ? `${s.seconds}s` : `${s.reps}`)
@@ -36,6 +47,6 @@ export function compact(sets) {
   const kg = kgs.size === 1 ? [...kgs][0] : undefined
   const tail = kg != null ? ` @${kg}kg` : ''
   if (kg !== undefined && new Set(sets.map(unit)).size === 1) return `${sets.length}×${unit(sets[0])}${tail}`
-  if (kg !== undefined) return sets.map(unit).join(' · ') + tail
-  return sets.map(s => `${unit(s)}${s.kg != null ? `@${s.kg}` : ''}`).join(' · ')
+  if (kg !== undefined) return runs(sets.map(unit)) + tail
+  return runs(sets.map(s => `${unit(s)}${s.kg != null ? `@${s.kg}` : ''}`))
 }

@@ -101,7 +101,7 @@ test('Spanish UI keeps exercise names untranslated', async ({ page }) => {
 test('exports the config file', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click()
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export exercise config/ }).click()])
-  expect(download.suggestedFilename()).toMatch(/^set-tracker-config-\d{4}-\d\d-\d\d\.json$/)
+  expect(download.suggestedFilename()).toMatch(/^sets-config-\d{4}-\d\d-\d\d\.json$/)
 })
 
 test('shows last time and flames a personal best', async ({ page }) => {
@@ -134,7 +134,7 @@ test('summary offers a backup and a shareable recap image', async ({ page }) => 
   await expect(page.getByText('Last backup: today')).toBeVisible()
 
   const [backup] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Back up' }).click()])
-  expect(backup.suggestedFilename()).toMatch(/^set-tracker-backup-.*\.json$/)
+  expect(backup.suggestedFilename()).toMatch(/^sets-backup-.*\.json$/)
 
   await page.getByRole('button', { name: 'Share image' }).click()
   const img = page.getByTestId('recap-preview')
@@ -144,5 +144,5 @@ test('summary offers a backup and a shareable recap image', async ({ page }) => 
   await expect.poll(() => img.evaluate(i => i.naturalHeight)).toBe(1350)
   await page.getByRole('radio', { name: 'ember' }).click()
   const [shot] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Share', exact: true }).click()])
-  expect(shot.suggestedFilename()).toMatch(/^set-tracker-\d{4}-\d\d-\d\d\.jpg$/)
+  expect(shot.suggestedFilename()).toMatch(/^sets-recap-\d{4}-\d\d-\d\d\.jpg$/)
 })

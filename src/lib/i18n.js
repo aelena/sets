@@ -32,7 +32,7 @@ const en = {
   lastBackup: 'Last backup', never: 'never', about: 'About',
   last: 'last', best: 'Personal best', bests: 'personal bests', bestOne: 'personal best', daysAgo: '{d} days ago', todayLower: 'today',
   shareImage: 'Share image', recap: 'Session recap', story: 'Story 9:16', post: 'Post 4:5', background: 'Background',
-  fromPhotos: 'From Photos', share: 'Share', rests: 'rests', moreExercises: '+{n} more',
+  fromPhotos: 'From Photos', share: 'Share', rests: 'rests', moreExercises: '+{n} more', pitch: 'free · no App Store',
 }
 
 const es = {
@@ -66,7 +66,7 @@ const es = {
   lastBackup: 'Última copia', never: 'nunca', about: 'Acerca de',
   last: 'última', best: 'Récord personal', bests: 'récords', bestOne: 'récord', daysAgo: 'hace {d} días', todayLower: 'hoy',
   shareImage: 'Compartir imagen', recap: 'Resumen en imagen', story: 'Historia 9:16', post: 'Post 4:5', background: 'Fondo',
-  fromPhotos: 'De Fotos', share: 'Compartir', rests: 'descansos', moreExercises: '+{n} más',
+  fromPhotos: 'De Fotos', share: 'Compartir', rests: 'descansos', moreExercises: '+{n} más', pitch: 'gratis · sin App Store',
 }
 
 export const dictionaries = { en, es }

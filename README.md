@@ -1,4 +1,4 @@
-# Sets: exercise tracker
+# Sets
 
 A small, opinionated web app for logging training sets at the gym or at home. It installs on an iPhone from Safari (no App Store), works offline, and keeps every set on the phone. You can chart each exercise's progression in the app or export it to Excel.
 
@@ -27,7 +27,7 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 
 ## Install on an iPhone
 
-1. Open **https://aelena.com/set-tracker/** in **Safari** (or your own deployment; it must be served over HTTPS, see [Deploy](#deploy)).
+1. Open **https://aelena.com/sets/** in **Safari** (or your own deployment; it must be served over HTTPS, see [Deploy](#deploy)).
 2. Share → **Add to Home Screen**.
 3. Open it from the home screen. From then on it runs full screen and offline.
 
@@ -41,7 +41,9 @@ Everything lives in the browser's IndexedDB on the device: no account, no server
 
 ## Recap backgrounds
 
-Put portrait photos (about 1080×1920, `.jpg`, `.jpeg`, `.png` or `.webp`, under 1 MB each) in [`src/assets/backgrounds/`](src/assets/backgrounds/) and rebuild. Each file becomes a background choice in the recap sheet and is cached for offline use. The app draws all text itself and darkens the photo towards the bottom, where the numbers sit, so the photos should have no text of their own.
+Put portrait photos (about 1080×1920, `.jpg`, `.jpeg`, `.png` or `.webp`, under 1 MB each) in [`src/assets/backgrounds/`](src/assets/backgrounds/) and rebuild. Each file becomes a background choice in the recap sheet and is cached for offline use. The app draws all text itself and darkens the photo towards the bottom, where the numbers sit, so the photos should have no text of their own. Every recap also prints `aelena.com/sets`, so whoever sees it can find the app.
+
+The bundled set was generated from the prompt in [`docs/background-prompt.md`](docs/background-prompt.md); the full-size originals stay out of git (`img/`).
 
 ## The config file
 

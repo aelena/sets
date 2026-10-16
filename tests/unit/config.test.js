@@ -6,7 +6,8 @@ describe('normalizeConfig', () => {
   it('builds the seed library with slug ids in group order', () => {
     const { exercises, groups, warnings } = normalizeConfig(seedConfig)
     expect(warnings).toEqual([])
-    expect(groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine'])
+    expect(groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'biceps', 'triceps', 'shoulders', 'leg-day', 'core'])
+    expect(groups[5].exerciseIds).toContain('back-squat')
     expect(groups[0].exerciseIds).toHaveLength(12)
     expect(groups[0].exerciseIds[0]).toBe('chest-thrusts')
     expect(exercises.find(e => e.id === '3-phase-supercurl')).toMatchObject({ sets: 3, reps: 10, kg: 16, type: 'reps' })
@@ -43,7 +44,7 @@ describe('mergeConfig', () => {
 
   it('merge keeps existing groups and appends new ones', () => {
     const out = mergeConfig(current, incoming, 'merge')
-    expect(out.groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'home'])
+    expect(out.groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'biceps', 'triceps', 'shoulders', 'leg-day', 'core', 'home'])
     expect(out.exercises.some(e => e.id === 'halos' && !e.archived)).toBe(true)
   })
 
@@ -64,5 +65,25 @@ describe('exportConfig', () => {
     const again = normalizeConfig(file)
     expect(again.exercises).toEqual(lib.exercises)
     expect(again.groups).toEqual(lib.groups)
+  })
+})
+
+describe('localDesc and the classic groups', async () => {
+  const { localDesc, CLASSIC_GROUPS } = await import('../../src/lib/seed.js')
+  it('shows the line for the language, falls back to English, leaves plain text alone', () => {
+    const d = 'EN: Elbows in.\nES: Codos pegados.'
+    expect(localDesc(d, 'es')).toBe('Codos pegados.')
+    expect(localDesc(d, 'en')).toBe('Elbows in.')
+    expect(localDesc(d, 'fr')).toBe('Elbows in.')
+    expect(localDesc('La superserie de curls.', 'en')).toBe('La superserie de curls.')
+    expect(localDesc('', 'en')).toBe('')
+  })
+  it('every classic exercise has both languages and a form link', () => {
+    const all = CLASSIC_GROUPS.flatMap(g => g.exercises)
+    expect(all.length).toBeGreaterThanOrEqual(30)
+    for (const e of all) {
+      expect(e.desc).toMatch(/^EN: .+\nES: .+$/)
+      expect(e.link).toMatch(/^https:\/\/www\.youtube\.com\/results\?search_query=.+\+proper\+form$/)
+    }
   })
 })

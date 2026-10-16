@@ -20,7 +20,7 @@ beforeEach(async () => {
 describe('repo', () => {
   it('seeds once', async () => {
     expect(await repo.seedIfEmpty()).toBe(false)
-    expect((await repo.library()).groups).toHaveLength(2)
+    expect((await repo.library()).groups).toHaveLength(7)
   })
 
   it('logs ad-hoc sets with a date and no session', async () => {
@@ -152,5 +152,34 @@ describe('upgrade from v1', () => {
     const db = createDb(name)
     expect(await db.sets.count()).toBe(1)
     expect((await db.activities.toArray()).map(a => a.id)).toEqual(['gym-bike', 'rowing', 'running'])
+  })
+})
+
+describe('upgrade to v3', () => {
+  it('appends the classic groups to an existing library without touching the user\'s', async () => {
+    const { default: Dexie } = await import('dexie')
+    const name = `v3-${n++}`
+    const v2 = new Dexie(name)
+    v2.version(1).stores({ exercises: 'id, name', groups: 'id, order', sets: '++id, ts, date, exerciseId, sessionId, [exerciseId+date]', sessions: 'id, start', rests: '++id, sessionId, start', notes: '++id, ts, date, sessionId' })
+    v2.version(2).stores({ activities: 'id, name', activityLogs: '++id, ts, date, activityId, sessionId' })
+    await v2.exercises.bulkAdd([
+      { id: 'halos', name: 'Halos', type: 'reps', sets: 5, reps: 10, kg: 16 },
+      { id: 'plank', name: 'Plank', type: 'time', sets: 4, seconds: 90, kg: null }, // the user's own plank
+    ])
+    await v2.groups.add({ id: 'mine', name: 'Mine', order: 0, exerciseIds: ['halos', 'plank'] })
+    v2.close()
+
+    const db = createDb(name)
+    const groups = await db.groups.orderBy('order').toArray()
+    expect(groups.map(g => g.name)).toEqual(['Mine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core'])
+    expect(groups[0].exerciseIds).toEqual(['halos', 'plank'])
+    expect((await db.exercises.get('plank')).seconds).toBe(90)
+    expect(groups.at(-1).exerciseIds[0]).toBe('plank')
+    expect(await db.exercises.get('dips')).toMatchObject({ name: 'Dips', reps: 10, kg: null })
+  })
+
+  it('a fresh install seeds all seven groups once', async () => {
+    const groups = (await repo.library()).groups
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core'])
   })
 })

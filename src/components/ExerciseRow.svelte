@@ -4,6 +4,7 @@
   import { settings } from '../lib/settings.js'
   import { setLabel } from '../lib/summary.js'
   import { compact } from '../lib/history.js'
+  import { localDesc } from '../lib/seed.js'
 
   let { exercise: ex, sets, last = null, bests = new Set(), onlog, onedit } = $props()
   let open = $state(false)
@@ -36,7 +37,7 @@
 
 {#if open}
   <div class="more">
-    {#if ex.desc}<p class="desc">{ex.desc}</p>{/if}
+    {#if ex.desc}<p class="desc">{localDesc(ex.desc, $settings.lang)}</p>{/if}
     {#if ex.link}<a href={ex.link} target="_blank" rel="noopener noreferrer" class="row small"><Icon name="video" size={18} /> {$t('watch')}</a>{/if}
     {#if sets.length}
       <div class="chips">

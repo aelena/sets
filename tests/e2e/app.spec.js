@@ -206,11 +206,8 @@ test('calendar marks session days and opens a day', async ({ page }) => {
   await expect(page.getByTestId('cal-count')).toHaveText('0 sessions')
 })
 
-test('calendar session days stay blue with white text in dark mode', async ({ browser }) => {
-  const ctx = await browser.newContext({ colorScheme: 'dark' })
-  const page = await ctx.newPage()
-  await page.addInitScript(() => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now() })))
-  await page.goto('/')
+test('calendar session days stay blue with white text in dark mode', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
   await page.getByRole('button', { name: 'Start session' }).click()
   await page.getByRole('button', { name: 'Stop session' }).click()
   await page.getByRole('button', { name: 'Close' }).last().click()
@@ -218,5 +215,17 @@ test('calendar session days stay blue with white text in dark mode', async ({ br
   await page.getByRole('button', { name: 'Calendar' }).click()
   const today = page.locator('.day.session')
   expect(await today.evaluate(e => [getComputedStyle(e).backgroundColor, getComputedStyle(e).color])).toEqual(['rgb(47, 111, 214)', 'rgb(255, 255, 255)'])
-  await ctx.close()
+})
+
+test('classic groups come with a description in the UI language and a form link', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Triceps' }).click()
+  await page.getByRole('button', { name: /^Dips/ }).click()
+  await expect(page.getByText(/^Upright torso for triceps/)).toBeVisible()
+  await expect(page.getByRole('link', { name: /Watch how/ })).toHaveAttribute('href', /search_query=Dips\+proper\+form/)
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Español' }).click()
+  await page.getByRole('button', { name: 'Entrenar' }).click()
+  await page.getByRole('button', { name: /^Dips/ }).click()
+  await expect(page.getByText(/^Torso erguido para tríceps/)).toBeVisible()
+  await expect(page.getByText(/^Upright torso/)).toHaveCount(0)
 })

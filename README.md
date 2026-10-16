@@ -9,6 +9,7 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 ## What it does
 
 - **Exercise groups.** Group exercises however you train ("Kettlebell Supergroup", "My Warm up Routine") and switch between groups at the top of the main screen. Exercises show in the group's order.
+- **Starter groups.** Your own Kettlebell Supergroup and warm-up, plus classic Biceps, Triceps, Shoulders, Leg Day and Core groups (curls, dips, presses, squats, planks...). Each classic exercise has a short form cue in English and Spanish (the app shows the one for the UI language) and a link to a YouTube search for good form. Weights are placeholders: edit them, or the groups, freely. Phones that already had data get the classic groups once, added after their own, without touching anything existing.
 - **One exercise, one history.** An exercise has a name, a target (sets × reps, or sets × seconds for planks, hangs and climbers), an optional weight (leave it empty for bodyweight), an optional "per side" flag, a free-text description and a video link. If an exercise is in two groups, it is still one exercise with one history.
 - **Logging a set takes two taps.** Tap **+**: reps and kg are prefilled from your last set today, or from the target. Confirm, or adjust and confirm. A counter shows `2/5` per exercise; "Undo" is offered right after each set, and any logged set can be edited or deleted.
 - **Last time, at a glance.** Under each exercise: `last: 10 · 10 · 9 @16kg · Wed`, the sets of the most recent earlier day.

@@ -6,7 +6,7 @@ export default defineConfig({
   // recap.spec renders sample images; heavy, so only on request (npm run test:recaps)
   testIgnore: process.env.RECAPS ? [] : ['**/recap.spec.js'],
   fullyParallel: true,
-  workers: 4, // more parallel WebKit instances than this time out on a laptop
+  workers: 3, // more parallel WebKit instances than this time out on a laptop
   reporter: 'list',
   use: { baseURL: 'http://localhost:5179', trace: 'retain-on-failure' },
   projects: [

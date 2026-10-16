@@ -4,6 +4,7 @@ _memoria/
 specs.md
 # tooling
 graft/
+.ignore
 node_modules/
 dist/
 dev-dist/

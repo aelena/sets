@@ -37,7 +37,7 @@ const en = {
   duration: 'Duration (min)', distance: 'Distance (km)', pace: 'Pace (min/km)', paceHint: `e.g. 6, 6:00 or 6'30"`,
   fillTwo: 'Fill any two: the third is worked out.', activityNotes: 'Notes (optional)', logActivity: 'Log activity',
   nothingMeasured: 'Enter a duration or a distance.', m_minutes: 'Minutes', m_km: 'Kilometres', m_pace: 'Pace (min/km)',
-  ms_minutes: 'Minutes', ms_km: 'km', ms_pace: 'Pace', rename: 'Rename', entries: 'Entries',
+  ms_minutes: 'Minutes', ms_km: 'km', ms_pace: 'Pace', rename: 'Rename', entries: 'Entries', calendar: 'Calendar', sessionsLower: 'sessions',
   confirmDeleteActivity: 'Remove this activity? If it has history it is archived and the history stays.',
 }
 
@@ -77,7 +77,7 @@ const es = {
   duration: 'Duración (min)', distance: 'Distancia (km)', pace: 'Ritmo (min/km)', paceHint: `p. ej. 6, 6:00 o 6'30"`,
   fillTwo: 'Rellena dos cualesquiera: el tercero se calcula.', activityNotes: 'Notas (opcional)', logActivity: 'Anotar actividad',
   nothingMeasured: 'Indica una duración o una distancia.', m_minutes: 'Minutos', m_km: 'Kilómetros', m_pace: 'Ritmo (min/km)',
-  ms_minutes: 'Minutos', ms_km: 'km', ms_pace: 'Ritmo', rename: 'Renombrar', entries: 'Entradas',
+  ms_minutes: 'Minutos', ms_km: 'km', ms_pace: 'Ritmo', rename: 'Renombrar', entries: 'Entradas', calendar: 'Calendario', sessionsLower: 'sesiones',
   confirmDeleteActivity: '¿Quitar esta actividad? Si tiene historial se archiva y el historial se conserva.',
 }
 

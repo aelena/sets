@@ -8,11 +8,13 @@
   import { dateKey, duration, hhmm } from '../lib/time.js'
   import Chart from '../components/Chart.svelte'
   import RecapSheet from '../components/RecapSheet.svelte'
+  import Calendar from '../components/Calendar.svelte'
 
   let seg = $state('charts')
   let exId = $state(null)
   let metric = $state(null)
   let recapFor = $state(null)
+  let picked = $state(null) // day selected in the calendar
 
   const sets = liveQuery(() => db.sets.toArray())
   const sessions = liveQuery(() => db.sessions.orderBy('start').reverse().toArray())
@@ -37,28 +39,50 @@
   const unit = { volume: ' kg', maxKg: ' kg', seconds: 's', reps: '', sets: '', minutes: ' min', km: ' km' }
   const fmt = v => (m === 'pace' ? (v ? `${formatPace(v)}/km` : '') : `${Math.round(v * 10) / 10}${unit[m] ?? ''}`)
 
-  /** History: one entry per day with anything on it, newest first. */
-  const history = $derived.by(() => {
+  /** Every day with anything on it, newest first. */
+  const allDays = $derived.by(() => {
     const byDate = new Map()
     const day = d => byDate.get(d) ?? byDate.set(d, { date: d, sets: [], sessions: [], notes: [], logs: [] }).get(d)
     ;($sets ?? []).forEach(s => day(s.date).sets.push(s))
     ;($sessions ?? []).forEach(s => day(dateKey(s.start)).sessions.push(s))
     ;($notes ?? []).forEach(n => day(n.date).notes.push(n))
     ;($logs ?? []).forEach(l => day(l.date).logs.push(l))
-    return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 90).map(d => {
+    return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)).map(d => {
       const counts = new Map()
       d.sets.forEach(s => counts.set(s.exerciseId, (counts.get(s.exerciseId) ?? 0) + 1))
       return { ...d, counts: [...counts].map(([id, n]) => `${exById[id]?.name ?? id} ×${n}`)
         .concat(d.logs.sort((a, b) => a.ts - b.ts).map(l => `${acById[l.activityId]?.name ?? l.activityId} ${activityLabel(l)}`)) }
     })
   })
+  const history = $derived(allDays.slice(0, 90))
+  const sessionDays = $derived(new Set(($sessions ?? []).map(s => dateKey(s.start))))
+  const otherDays = $derived(new Set(allDays.filter(d => d.sets.length || d.logs.length).map(d => d.date)))
+  const pickedDay = $derived(allDays.find(d => d.date === picked))
   const longDate = d => new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(midnight(d))
 </script>
+
+{#snippet dayCard(d)}
+  <section class="day">
+    <h2>{longDate(d.date)}</h2>
+    <div class="card stack inner">
+      {#each d.sessions as s (s.id)}
+        <details>
+          <summary>{$t('session')} {hhmm(s.start)}{s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}</summary>
+          {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
+          {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
+        </details>
+      {/each}
+      {#if d.counts.length}<div class="small">{d.counts.join(' · ')}</div>{/if}
+      {#each d.notes as n (n.id)}<blockquote>{hhmm(n.ts)} · {n.text}</blockquote>{/each}
+    </div>
+  </section>
+{/snippet}
 
 <main class="view">
   <h1 class="page-title">{$t('progress')}</h1>
   <div class="segmented">
     <button aria-pressed={seg === 'charts'} onclick={() => (seg = 'charts')}>{$t('charts')}</button>
+    <button aria-pressed={seg === 'calendar'} onclick={() => (seg = 'calendar')}>{$t('calendar')}</button>
     <button aria-pressed={seg === 'history'} onclick={() => (seg = 'history')}>{$t('history')}</button>
   </div>
 
@@ -87,23 +111,13 @@
         </tbody>
       </table>
     {/if}
+  {:else if seg === 'calendar'}
+    <Calendar {sessionDays} {otherDays} selected={picked} onselect={d => (picked = picked === d ? null : d)} />
+    {#if pickedDay}{@render dayCard(pickedDay)}{:else if picked}<p class="muted">{$t('noData')}</p>{/if}
   {:else}
     {#if !history.length}<p class="muted">{$t('noData')}</p>{/if}
     {#each history as d (d.date)}
-      <section class="day">
-        <h2>{longDate(d.date)}</h2>
-        <div class="card stack inner">
-          {#each d.sessions as s (s.id)}
-            <details>
-              <summary>{$t('session')} {hhmm(s.start)}{s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}</summary>
-              {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
-              {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
-            </details>
-          {/each}
-          {#if d.counts.length}<div class="small">{d.counts.join(' · ')}</div>{/if}
-          {#each d.notes as n (n.id)}<blockquote>{hhmm(n.ts)} · {n.text}</blockquote>{/each}
-        </div>
-      </section>
+      {@render dayCard(d)}
     {/each}
   {/if}
 </main>

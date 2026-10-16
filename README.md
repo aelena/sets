@@ -19,6 +19,7 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 - **Session summary.** Stopping a session shows, and stores as plain text: duration, sets, exercises, volume, rest count / total / average / longest, and every exercise's sets. The same sheet has a **Back up** button and says how long ago the last backup was.
 - **Recap image for Instagram.** From the summary, or from any session in History: a 1080×1920 story or 1080×1350 post with the date, duration, sets, volume, personal bests and the exercise list, drawn over a gradient, a bundled photo or one picked from Photos. **Share** opens the iOS share sheet, where Instagram is one of the targets.
 - **Notes.** The speech bubble opens a notes box tied to the running session, or to the day. To dictate, use the microphone on the iPhone keyboard.
+- **Calendar.** Under Progress: a month view where days with a session are solid blue squares with white numbers, in light and dark mode. Days with only ad-hoc training get a blue outline. Tap a day to see what was done.
 - **Progress.** A chart per exercise (volume, heaviest weight, total reps or seconds, sets per day), with a table of the same numbers, and a day-by-day history of sessions, sets and notes.
 - **Export / import.**
   - Sets to **Excel (.xlsx)**, one row per set. It is a real workbook, not a CSV, so Excel in a Spanish or other European locale opens it correctly.

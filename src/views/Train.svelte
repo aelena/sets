@@ -1,8 +1,8 @@
 <script>
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
-  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, completedSessions, now, shownSummary } from '../lib/store.js'
-  import { lastDay, personalBests, BESTS_AFTER_SESSIONS } from '../lib/history.js'
+  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
+  import { lastDay, personalBests } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords } from '../lib/i18n.js'
   import { clock, dateKey } from '../lib/time.js'
@@ -53,7 +53,7 @@
       out[ex.id] = {
         today: mine.filter(s => s.date === todayKey).sort((a, b) => a.ts - b.ts),
         last: lastDay(mine, todayKey),
-        bests: ($completedSessions ?? 0) >= BESTS_AFTER_SESSIONS ? personalBests(mine) : new Set(),
+        bests: personalBests(mine),
       }
     }
     return out

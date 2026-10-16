@@ -90,12 +90,12 @@ test('edit a group: add a timed exercise and reorder', async ({ page }) => {
   await expect(page.getByLabel('seconds')).toHaveValue('60')
 })
 
-test('Spanish UI keeps exercise names untranslated', async ({ page }) => {
+test('Spanish UI translates the UI and shows Spanish exercise names', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Español' }).click()
   await page.getByRole('button', { name: 'Entrenar' }).click()
   await expect(page.getByRole('button', { name: 'Empezar sesión' })).toBeVisible()
-  await expect(page.locator('.title').first()).toHaveText('Chest Thrusts')
+  await expect(page.locator('.title').first()).toHaveText('Empujes desde el pecho')
 })
 
 test('exports the config file', async ({ page }) => {
@@ -122,17 +122,22 @@ test('shows last time and flames a personal best', async ({ page }) => {
   await page.getByLabel('reps').fill('12')
   await page.getByRole('button', { name: 'Log set', exact: true }).click()
   await expect(halos.getByTestId('count')).toHaveText('1/5')
-  await expect(halos.getByTitle('Personal best')).toHaveCount(0) // fewer than 12 sessions: no flames yet
+  await expect(halos.getByTitle('Personal best')).toHaveCount(0) // Halos' 2nd day: no flames yet
 
+  // ten more earlier Halos days (8 reps), so today is its 12th training day
   await page.evaluate(async () => {
     const db = await new Promise(ok => { const r = indexedDB.open('exercise-tracker'); r.onsuccess = () => ok(r.result) })
-    const tx = db.transaction('sessions', 'readwrite')
-    for (let i = 1; i <= 12; i++) tx.objectStore('sessions').put({ id: `old-${i}`, start: Date.UTC(2026, 8, i, 17), end: Date.UTC(2026, 8, i, 18), summary: '' })
+    const tx = db.transaction('sets', 'readwrite')
+    for (let d = 1; d <= 10; d++) tx.objectStore('sets').add({ ts: new Date(2026, 8, d, 18).getTime(), date: `2026-09-${String(d).padStart(2, '0')}`, exerciseId: 'halos', reps: 8, kg: 16, sessionId: null })
     await new Promise(ok => (tx.oncomplete = ok))
     db.close()
   })
   await page.reload()
   await expect(halos.getByTitle('Personal best')).toBeVisible()
+  // another exercise with no history logs a big set today: no flame, it has only one day
+  await page.getByRole('button', { name: 'Log set: Chest Thrusts', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(row(page, 'Chest Thrusts').getByTitle('Personal best')).toHaveCount(0)
   await halos.getByRole('button', { name: /^Halos/ }).click()
   await expect(page.getByRole('button', { name: '1: 12 @16kg' }).getByLabel('Personal best')).toBeVisible()
 })

@@ -22,13 +22,15 @@ describe('personalBests', () => {
     const d = set('2026-10-03', 13, 16) // more reps
     const e = set('2026-10-05', 5, 20) // heavier
     const f = set('2026-10-05', 5, 18) // lighter than e with same reps: dominated
-    expect([...personalBests([f, e, d, c, b, a])]).toEqual([d.id, e.id])
+    expect([...personalBests([f, e, d, c, b, a], 2)]).toEqual([d.id, e.id])
+    expect([...personalBests([f, e, d, c, b, a], 3)]).toEqual([e.id]) // day 3 is the first that may flame
+    expect([...personalBests([f, e, d, c, b, a])]).toEqual([]) // default: from the 12th day
   })
 
   it('handles bodyweight and timed sets', () => {
     const plank = (date, seconds) => set(date, null, null, { seconds })
     const sets = [plank('2026-10-01', 60), plank('2026-10-02', 45), plank('2026-10-03', 75)]
-    expect([...personalBests(sets)]).toEqual([sets[2].id])
+    expect([...personalBests(sets, 2)]).toEqual([sets[2].id])
   })
 })
 
@@ -52,7 +54,7 @@ describe('recapData', () => {
     const r = recapData({
       session: { start: s1.ts - 60_000, end: s1.ts + 30 * 60_000, stats: { rests: 3 } },
       sets: [s2, s1], history: [old, s1, s2],
-      exercisesById: { halos: { name: 'Halos' }, swing: { name: 'Lateral Swing' } },
+      exercisesById: { halos: { name: 'Halos' }, swing: { name: 'Lateral Swing' } }, bestsFromDay: 2,
     })
     expect(r).toMatchObject({ sets: 2, exercises: 2, volume: 1192, rests: 3, bests: 1, durationMs: 31 * 60_000 })
     expect(r.lines).toEqual([

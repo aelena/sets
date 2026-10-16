@@ -1,5 +1,8 @@
-/** Flames stay hidden until this many sessions are completed: early on, every set would be a best. (user, 2026-10-16) */
-export const BESTS_AFTER_SESSIONS = 12
+/**
+ * An exercise earns flames from its 12th training day on: before that, nearly every set is a best.
+ * Per exercise, counted in days the exercise was done, ad-hoc days included. (user, 2026-10-16)
+ */
+export const BESTS_FROM_DAY = 12
 
 /** The amount a set is measured in: reps, or seconds for timed exercises. */
 const amount = s => s.reps ?? s.seconds ?? 0
@@ -15,17 +18,18 @@ export function lastDay(sets, today) {
 
 /**
  * Ids of the sets that were a personal best when logged: no earlier set had
- * as much weight (or more) and as many reps or seconds (or more).
- * Nothing flames on the exercise's first day, when there is nothing to beat yet.
+ * as much weight (or more) and as many reps or seconds (or more). Only sets logged on the
+ * exercise's `fromDay`-th training day or later can count; earlier ones still set the bar.
  */
-export function personalBests(sets) {
+export function personalBests(sets, fromDay = BESTS_FROM_DAY) {
   const sorted = [...sets].sort((a, b) => a.ts - b.ts)
-  const firstDay = sorted[0]?.date
   const ids = new Set()
   const seen = []
+  const days = new Set()
   for (const s of sorted) {
+    days.add(s.date)
     const w = s.kg ?? 0, v = amount(s)
-    if (s.date !== firstDay && !seen.some(p => p.w >= w && p.v >= v)) ids.add(s.id)
+    if (days.size >= fromDay && seen.length && !seen.some(p => p.w >= w && p.v >= v)) ids.add(s.id)
     seen.push({ w, v })
   }
   return ids

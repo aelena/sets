@@ -14,10 +14,10 @@ export const GRADIENTS = {
  * Everything the recap image shows, from one session.
  * `history` is all sets of the exercises involved, so personal bests are judged against the past.
  */
-export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {}, bestsEnabled = true, groupsById = {}, lang = 'en' }) {
+export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {}, bestsFromDay, groupsById = {}, lang = 'en' }) {
   const mine = [...sets].sort((a, b) => a.ts - b.ts)
   const order = [...new Set(mine.map(s => s.exerciseId))]
-  const bests = bestsEnabled ? new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id))])) : new Set()
+  const bests = new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id), bestsFromDay)]))
   // muscles trained, by number of sets; exercises without muscles count under the group they were logged from
   const tally = new Map()
   const bump = (k, v) => tally.set(k, (tally.get(k) ?? 0) + v)

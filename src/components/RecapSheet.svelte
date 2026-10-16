@@ -5,7 +5,6 @@
   import { settings, FONTS } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { recapData, GRADIENTS } from '../lib/recap.js'
-  import { BESTS_AFTER_SESSIONS } from '../lib/history.js'
   import { drawRecap, toJpeg, loadImage, PHOTOS } from '../lib/recapImage.js'
   import { deliver } from '../lib/export.js'
   import { dateKey } from '../lib/time.js'
@@ -23,13 +22,13 @@
     if ($settings.recapBg === 'picked') $settings.recapBg = 'ink' // a picked photo is not kept between openings
     const sets = await db.sets.where('sessionId').equals(session.id).toArray()
     const ids = [...new Set(sets.map(s => s.exerciseId))]
-    const [history, exercises, activityLogs, activities, done, groups] = await Promise.all([
+    const [history, exercises, activityLogs, activities, groups] = await Promise.all([
       db.sets.where('exerciseId').anyOf(ids).toArray(), db.exercises.bulkGet(ids),
       db.activityLogs.where('sessionId').equals(session.id).toArray(), db.activities.toArray(),
-      db.sessions.filter(s => !!s.end).count(), db.groups.toArray(),
+      db.groups.toArray(),
     ])
     data = recapData({
-      session, sets, history, activityLogs, bestsEnabled: done >= BESTS_AFTER_SESSIONS,
+      session, sets, history, activityLogs,
       groupsById: Object.fromEntries(groups.map(g => [g.id, g])), lang: $settings.lang,
       exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),

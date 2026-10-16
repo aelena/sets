@@ -25,6 +25,11 @@ export const ES_EXERCISES = {
   'Seated Cable Row': 'Remo sentado en polea', 'One-arm Dumbbell Row': 'Remo con mancuerna a una mano', 'T-bar Row': 'Remo en T',
   'Straight-arm Pulldown': 'Jalón con brazos rectos', 'Back Extension': 'Hiperextensiones',
   'Arm superseries': 'Superserie de brazos', 'Disc routine': 'Rutina con disco',
+  'Chest Thrusts': 'Empujes desde el pecho', 'Round the Worlds': 'Vueltas al mundo', 'Halos': 'Halos',
+  'Lateral Swing': 'Swing lateral', 'Forward Swing': 'Swing frontal', 'Chest to Sky': 'Del pecho al cielo',
+  'Over the Shoulder': 'Por encima del hombro', '3-phase supercurl': 'Supercurl en 3 fases',
+  'Overhead March': 'Marcha con peso sobre la cabeza', 'Overhand Row': 'Remo prono', 'Upright Row': 'Remo al mentón',
+  'Torso Twists': 'Giros de torso',
 }
 
 /** Spanish names of built-in groups and activities, by English name. */

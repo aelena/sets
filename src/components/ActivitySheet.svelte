@@ -3,6 +3,8 @@
   import Sheet from './Sheet.svelte'
   import { repo, notify } from '../lib/store.js'
   import { t } from '../lib/i18n.js'
+  import { settings } from '../lib/settings.js'
+  import { nameOf } from '../lib/names.js'
   import { parsePace, formatPace, activityLabel } from '../lib/activity.js'
 
   /**
@@ -60,7 +62,7 @@
     const target = activity ?? (await repo.ensureActivity(name))
     const id = await repo.logActivity({ activityId: target.id, ...values })
     if (id == null) { error = $t('nothingMeasured'); return }
-    notify(`${$t('logged')} · ${target.name} ${preview}`, { label: $t('undo'), run: () => repo.deleteActivityLog(id) })
+    notify(`${$t('logged')} · ${nameOf(target, $settings.lang)} ${preview}`, { label: $t('undo'), run: () => repo.deleteActivityLog(id) })
     onclose()
   }
 
@@ -71,7 +73,7 @@
   }
 </script>
 
-<Sheet title={activity?.name ?? $t('otherActivity')} {onclose}>
+<Sheet title={activity ? nameOf(activity, $settings.lang) : $t('otherActivity')} {onclose}>
   <form class="stack" onsubmit={submit}>
     {#if !activity}
       <label>{$t('activityName')}<input bind:value={name} required placeholder="Swimming, Hike, Yoga…" /></label>

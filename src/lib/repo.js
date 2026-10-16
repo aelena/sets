@@ -1,7 +1,8 @@
 import { normalizeConfig, mergeConfig, exportConfig, cleanExercise, BACKUP_FORMAT } from './config.js'
 import { buildSummary } from './summary.js'
 import { PACKS, CATALOG_MUSCLES } from './seed.js'
-import { planPack, missingMuscles } from './packs.js'
+import { planPack, missingMuscles, missingNames, planCuration } from './packs.js'
+import { ES_EXERCISES, ES_GROUPS, ES_ACTIVITIES } from './catalog.js'
 import { dateKey, uid, slugify } from './time.js'
 import { resolve, DEFAULT_ACTIVITIES } from './activity.js'
 
@@ -28,17 +29,32 @@ export const createRepo = (db, clock = () => Date.now()) => {
    * Add-only: whatever the user created, edited or removed stays as it is. Returns the ids applied now.
    */
   async function applyPacks(packs = PACKS) {
-    return db.transaction('rw', db.exercises, db.groups, db.meta, async () => {
+    return db.transaction('rw', [db.exercises, db.groups, db.meta, db.sets, db.activities], async () => {
       const applied = new Set((await db.meta.get('packs'))?.applied ?? [])
       const now = []
       for (const pack of packs.filter(p => !applied.has(p.id))) {
-        const { addExercises, addGroups } = planPack(pack, { exercises: await db.exercises.toArray(), groups: await db.groups.orderBy('order').toArray() })
-        await db.exercises.bulkAdd(addExercises)
-        await db.groups.bulkAdd(addGroups)
+        const exercises = await db.exercises.toArray(), groups = await db.groups.orderBy('order').toArray()
+        if (pack.kind === 'curate') {
+          const setCounts = {}
+          for (const m of pack.merges ?? []) setCounts[m.from] = await db.sets.where('exerciseId').equals(m.from).count()
+          const plan = planCuration(pack, { exercises, groups, setCounts })
+          for (const { id, changes } of plan.exerciseUpdates) await db.exercises.update(id, changes)
+          for (const { id, changes } of plan.groupUpdates) await db.groups.update(id, changes)
+          for (const { id, exerciseIds } of plan.regroup) await db.groups.update(id, { exerciseIds })
+          for (const id of plan.archive) await db.exercises.update(id, { archived: true })
+        } else {
+          const { addExercises, addGroups } = planPack(pack, { exercises, groups })
+          await db.exercises.bulkAdd(addExercises)
+          await db.groups.bulkAdd(addGroups)
+        }
         applied.add(pack.id)
         now.push(pack.id)
       }
+      // fill-only: muscles and Spanish names where missing, never replacing what is there
       for (const { id, muscles } of missingMuscles(await db.exercises.toArray(), CATALOG_MUSCLES)) await db.exercises.update(id, { muscles })
+      for (const { id, names } of missingNames(await db.exercises.toArray(), ES_EXERCISES)) await db.exercises.update(id, { names })
+      for (const { id, names } of missingNames(await db.groups.toArray(), ES_GROUPS)) await db.groups.update(id, { names })
+      for (const { id, names } of missingNames(await db.activities.toArray(), ES_ACTIVITIES)) await db.activities.update(id, { names })
       await db.meta.put({ key: 'packs', applied: [...applied] })
       return now
     })
@@ -154,7 +170,11 @@ export const createRepo = (db, clock = () => Date.now()) => {
   const updateActivityLog = (id, { minutes, km, pace, notes = '' }) => db.activityLogs.update(id, { ...resolve({ minutes, km, pace }), notes: notes.trim() })
   const deleteActivityLog = id => db.activityLogs.delete(id)
   const restoreActivityLog = row => db.activityLogs.put(row)
-  const renameActivity = (id, name) => name.trim() && db.activities.update(id, { name: name.trim() })
+  const renameActivity = async (id, name, es) => {
+    if (!name?.trim()) return
+    const a = await db.activities.get(id)
+    await db.activities.update(id, { name: name.trim(), ...(es === undefined ? {} : { names: { ...a?.names, es: es.trim() } }) })
+  }
 
   /** Like exercises: archived when it has history, deleted otherwise. */
   async function deleteActivity(id) {
@@ -241,7 +261,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
       await db.activities.bulkPut(json.activities ?? DEFAULT_ACTIVITIES)
       await db.activityLogs.bulkPut(json.activityLogs ?? [])
       // the backup is the user's library as they left it: no built-in pack is re-added on top
-      await db.meta.put({ key: 'packs', applied: json.packs ?? PACKS.map(p => p.id) })
+      // backups made before packs were tracked: only the packs of that time count as applied
+      await db.meta.put({ key: 'packs', applied: json.packs ?? ['base-1', 'classic-1'] })
     })
     return json.settings ?? {}
   }

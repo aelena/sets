@@ -22,6 +22,7 @@ export const cleanExercise = (raw, id = raw.id) => {
     link: str(raw.link),
     archived: !!raw.archived,
     ...(Array.isArray(raw.muscles) ? { muscles: raw.muscles.filter(m => typeof m === 'string') } : {}),
+    ...(raw.names && typeof raw.names === 'object' ? { names: { ...raw.names } } : {}),
   }
 }
 
@@ -48,8 +49,10 @@ export function normalizeConfig(input, known = []) {
   const lower = s => str(s).toLowerCase()
   const taken = new Set(byId.keys())
   const out = new Map()
+  // an archived exercise is only matched by name when no live one has it
+  const live = known.filter(e => !e.archived)
   const findByName = name =>
-    [...out.values()].find(e => lower(e.name) === lower(name)) ?? known.find(e => lower(e.name) === lower(name))
+    [...out.values()].find(e => lower(e.name) === lower(name)) ?? live.find(e => lower(e.name) === lower(name)) ?? known.find(e => lower(e.name) === lower(name))
 
   const resolve = raw => {
     if (typeof raw === 'string') {
@@ -70,6 +73,7 @@ export function normalizeConfig(input, known = []) {
   const groups = input.groups.map((g, i) => ({
     id: uniqueId(str(g.id) || slugify(g.name || `group-${i + 1}`), groupTaken),
     name: str(g.name) || `Group ${i + 1}`,
+    ...(g.names ? { names: { ...g.names } } : {}),
     order: i,
     exerciseIds: [...new Set((g.exercises ?? []).map(resolve).filter(Boolean))],
   }))
@@ -104,5 +108,5 @@ export const exportConfig = ({ exercises, groups }) => ({
   format: CONFIG_FORMAT,
   version: 1,
   exercises: exercises.filter(e => !e.archived).map(compact),
-  groups: [...groups].sort((a, b) => a.order - b.order).map(g => ({ id: g.id, name: g.name, exercises: g.exerciseIds })),
+  groups: [...groups].sort((a, b) => a.order - b.order).map(g => ({ id: g.id, name: g.name, ...(g.names ? { names: g.names } : {}), exercises: g.exerciseIds })),
 })

@@ -1,4 +1,4 @@
-import { derived } from 'svelte/store'
+import { derived, get } from 'svelte/store'
 import { settings } from './settings.js'
 
 const en = {
@@ -47,6 +47,7 @@ const en = {
   driveConnected: 'Connected', driveNotConfigured: 'Needs a Google OAuth client ID (see README).', driveClientId: 'Google OAuth client ID',
   driveAuto: 'Upload each session when it stops', drive: 'Google Drive', driveWaiting: 'Connecting to Google…',
   todayOnly: 'Only what I did today', todayOnlyOn: 'Today: everything logged so far, all groups', nothingToday: 'Nothing logged today yet. Tap ✓ to go back to the groups.',
+  activitiesTab: 'Cardio & more', nameEs: 'Name in Spanish',
 }
 
 const es = {
@@ -95,6 +96,7 @@ const es = {
   driveConnected: 'Conectado', driveNotConfigured: 'Necesita un ID de cliente OAuth de Google (ver README).', driveClientId: 'ID de cliente OAuth de Google',
   driveAuto: 'Subir cada sesión al terminarla', drive: 'Google Drive', driveWaiting: 'Conectando con Google…',
   todayOnly: 'Solo lo de hoy', todayOnlyOn: 'Hoy: todo lo anotado hasta ahora, de todos los grupos', nothingToday: 'Aún no hay nada anotado hoy. Pulsa ✓ para volver a los grupos.',
+  activitiesTab: 'Cardio y más', nameEs: 'Nombre en español',
 }
 
 export const dictionaries = { en, es }
@@ -106,5 +108,7 @@ export const t = derived(settings, $s => {
 })
 
 /** Words baked into a stored session summary. */
-export const summaryWords = tr =>
-  Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)]))
+export const summaryWords = tr => ({
+  ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)])),
+  lang: get(settings).lang,
+})

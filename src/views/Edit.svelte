@@ -3,6 +3,8 @@
   import { t } from '../lib/i18n.js'
   import Icon from '../components/Icon.svelte'
   import ExerciseForm from '../components/ExerciseForm.svelte'
+  import { settings } from '../lib/settings.js'
+  import { nameOf } from '../lib/names.js'
 
   let seg = $state('groups')
   let groupId = $state(null) // group being edited
@@ -11,7 +13,7 @@
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const group = $derived(($groups ?? []).find(g => g.id === groupId))
-  const library = $derived(($exercises ?? []).filter(e => !e.archived).sort((a, b) => a.name.localeCompare(b.name)))
+  const library = $derived(($exercises ?? []).filter(e => !e.archived).sort((a, b) => nameOf(a, $settings.lang).localeCompare(nameOf(b, $settings.lang))))
   const addable = $derived(library.filter(e => !group?.exerciseIds.includes(e.id)))
 
   const setIds = ids => repo.saveGroup({ ...$state.snapshot(group), exerciseIds: ids })
@@ -48,7 +50,7 @@
 
 <main class="view">
   {#if form}
-    <h1 class="page-title">{form.exercise?.name ?? $t('newExercise')}</h1>
+    <h1 class="page-title">{form.exercise ? nameOf(form.exercise, $settings.lang) : $t('newExercise')}</h1>
     <ExerciseForm exercise={form.exercise} onsave={saveExercise} oncancel={() => (form = null)}
       ondelete={form.exercise ? deleteExercise : null} />
   {:else if group}
@@ -59,14 +61,17 @@
     <label>{$t('groupName')}
       <input value={group.name} onchange={e => e.currentTarget.value.trim() && repo.saveGroup({ ...$state.snapshot(group), name: e.currentTarget.value.trim() })} />
     </label>
+    <label>{$t('nameEs')}
+      <input value={group.names?.es ?? ''} onchange={e => repo.saveGroup({ ...$state.snapshot(group), names: { ...group.names, es: e.currentTarget.value.trim() } })} />
+    </label>
     <ul class="list card items">
       {#each group.exerciseIds as id, i (id)}
         {@const ex = exById[id]}
         <li class="row">
-          <button class="ghost grow left" onclick={() => (form = { exercise: ex })}>{ex?.name ?? id}</button>
+          <button class="ghost grow left" onclick={() => (form = { exercise: ex })}>{ex ? nameOf(ex, $settings.lang) : id}</button>
           <button class="icon ghost" aria-label={$t('up')} disabled={i === 0} onclick={() => move(i, -1)}><Icon name="up" /></button>
           <button class="icon ghost" aria-label={$t('down')} disabled={i === group.exerciseIds.length - 1} onclick={() => move(i, 1)}><Icon name="down" /></button>
-          <button class="icon ghost danger" aria-label="{$t('remove')}: {ex?.name}" onclick={() => setIds(group.exerciseIds.filter(x => x !== id))}><Icon name="x" /></button>
+          <button class="icon ghost danger" aria-label="{$t('remove')}: {ex ? nameOf(ex, $settings.lang) : id}" onclick={() => setIds(group.exerciseIds.filter(x => x !== id))}><Icon name="x" /></button>
         </li>
       {/each}
     </ul>
@@ -75,7 +80,7 @@
         <div class="row">
           <select class="grow" bind:value={picking} aria-label={$t('addExisting')}>
             <option value="">{$t('addExisting')}…</option>
-            {#each addable as e (e.id)}<option value={e.id}>{e.name}</option>{/each}
+            {#each addable as e (e.id)}<option value={e.id}>{nameOf(e, $settings.lang)}</option>{/each}
           </select>
           <button disabled={!picking} onclick={() => { setIds([...group.exerciseIds, picking]); picking = '' }}><Icon name="plus" /></button>
         </div>
@@ -95,7 +100,7 @@
         {#each $groups ?? [] as g, i (g.id)}
           <li class="row">
             <button class="ghost grow left" onclick={() => (groupId = g.id)}>
-              {g.name} <span class="muted small">({g.exerciseIds.length})</span>
+              {nameOf(g, $settings.lang)} <span class="muted small">({g.exerciseIds.length})</span>
             </button>
             <button class="icon ghost" aria-label={$t('up')} disabled={i === 0} onclick={() => repo.moveGroup(g.id, -1)}><Icon name="up" /></button>
             <button class="icon ghost" aria-label={$t('down')} disabled={i === $groups.length - 1} onclick={() => repo.moveGroup(g.id, 1)}><Icon name="down" /></button>
@@ -109,6 +114,8 @@
           <li class="row">
             <input class="grow plain" value={a.name} aria-label="{$t('rename')}: {a.name}"
               onchange={e => repo.renameActivity(a.id, e.currentTarget.value)} />
+            <input class="grow plain" value={a.names?.es ?? ''} placeholder="ES" aria-label="{$t('nameEs')}: {a.name}"
+              onchange={e => repo.renameActivity(a.id, a.name, e.currentTarget.value)} />
             <button class="icon ghost danger" aria-label="{$t('remove')}: {a.name}"
               onclick={() => confirm($t('confirmDeleteActivity')) && repo.deleteActivity(a.id)}><Icon name="x" /></button>
           </li>
@@ -118,7 +125,7 @@
     {:else}
       <ul class="list card items">
         {#each library as e (e.id)}
-          <li><button class="ghost left full" onclick={() => (form = { exercise: e })}>{e.name}</button></li>
+          <li><button class="ghost left full" onclick={() => (form = { exercise: e })}>{nameOf(e, $settings.lang)}</button></li>
         {/each}
       </ul>
       <button class="add-btn" onclick={() => (form = { exercise: null })}>{$t('newExercise')}</button>

@@ -1,3 +1,5 @@
+import { ES_EXERCISES, ES_GROUPS, CURATE_1 } from './catalog.js'
+
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
 
@@ -213,15 +215,25 @@ export const BACK_GROUPS = [
   },
 ]
 
+/** A pack group with Spanish names attached, for groups and their exercise objects. */
+function withEs(g) {
+  return {
+    ...g,
+    ...(ES_GROUPS[g.name] ? { names: { es: ES_GROUPS[g.name] } } : {}),
+    exercises: g.exercises.map(e => (typeof e === 'object' && ES_EXERCISES[e.name] ? { ...e, names: { es: ES_EXERCISES[e.name] } } : e)),
+  }
+}
+
 /**
  * Built-in content, applied once per phone and only ever added (see planPack).
  * A new batch of groups gets a new pack id; existing packs are never re-applied.
  * `label` names a group that clashes with one the user already has: "Back (classic)".
  */
 export const PACKS = [
-  { id: 'base-1', label: 'starter', groups: seedConfig.groups },
-  { id: 'classic-1', label: 'classic', groups: CLASSIC_GROUPS },
-  { id: 'back-1', label: 'classic', groups: BACK_GROUPS },
+  { id: 'base-1', label: 'starter', groups: seedConfig.groups.map(withEs) },
+  { id: 'classic-1', label: 'classic', groups: CLASSIC_GROUPS.map(withEs) },
+  CURATE_1, // before back-1, so the Back pack finds the user's renamed exercises by name
+  { id: 'back-1', label: 'classic', groups: BACK_GROUPS.map(withEs) },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

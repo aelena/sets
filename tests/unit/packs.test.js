@@ -55,7 +55,7 @@ describe('missingMuscles', () => {
 describe('applyPacks', () => {
   it('fresh phone: all packs once, nothing on the second start', async () => {
     const repo = createRepo(createDb(`packs-${n++}`))
-    expect(await repo.applyPacks()).toEqual(['base-1', 'classic-1', 'back-1'])
+    expect(await repo.applyPacks()).toEqual(['base-1', 'classic-1', 'curate-1', 'back-1'])
     expect(await repo.applyPacks()).toEqual([])
     const { groups } = await repo.library()
     expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back'])
@@ -78,7 +78,7 @@ describe('applyPacks', () => {
     old.close()
 
     const repo = createRepo(createDb(name))
-    expect(await repo.applyPacks()).toEqual(['back-1'])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
     const { groups, exercises } = await repo.library()
     expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)'])
     expect(groups[1].exerciseIds).toEqual(['my-row'])
@@ -87,10 +87,65 @@ describe('applyPacks', () => {
     expect(exercises.find(e => e.id === 'halos').muscles).toBeUndefined()
   })
 
-  it('a restored backup is not topped up with packs', async () => {
+  it('a backup from before packs gets only the packs added since; one that lists its packs gets none', async () => {
     const repo = createRepo(createDb(`packs-${n++}`))
-    await repo.restore({ format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [{ id: 'x', name: 'Only mine', order: 0, exerciseIds: [] }], sets: [], sessions: [], notes: [] })
+    const mine = { format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [{ id: 'x', name: 'Only mine', order: 0, exerciseIds: [] }], sets: [], sessions: [], notes: [] }
+    await repo.restore(mine)
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
+    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back'])
+    await repo.restore({ ...mine, packs: PACKS.map(p => p.id) })
     expect(await repo.applyPacks()).toEqual([])
     expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine'])
+  })
+})
+
+describe('curate-1 on a library like the first hand-built one', () => {
+  it('renames under guard, translates, merges the unused Face Pull, keeps every id and set', async () => {
+    const repo = createRepo(createDb(`curate-${n++}`))
+    await repo.applyPacks(PACKS.filter(p => ['base-1', 'classic-1'].includes(p.id)))
+    const db = repo.db
+    await db.exercises.bulkAdd([
+      { id: 'polea-alta-al-pecho', name: 'Polea alta al pecho', type: 'reps', sets: 4, reps: 12, kg: 52, desc: 'De 52 en adelante' },
+      { id: 'polea-ajustable-hacia-la-cabeza', name: 'Polea Ajustable hacia la cabeza', type: 'reps', sets: 3, reps: 10, kg: 32 },
+      { id: 'dominadas', name: 'Dominadas', type: 'reps', sets: 2, reps: 12, kg: null },
+      { id: 'remo-sentado', name: 'Remo Sentado', type: 'reps', sets: 4, reps: 12, kg: 35 },
+      { id: 'curl-muneca-sentado', name: 'Curl mu\u00f1eca sentado', type: 'reps', sets: 4, reps: 12, kg: 25 },
+      { id: 'renamed-by-me', name: 'My own row', type: 'reps', sets: 3, reps: 10, kg: 40 },
+    ])
+    await db.groups.bulkAdd([
+      { id: 'nuevo-grupo', name: 'Espalda', order: 7, exerciseIds: ['polea-alta-al-pecho', 'polea-ajustable-hacia-la-cabeza', 'remo-sentado'] },
+      { id: 'nuevo-grupo-3', name: 'Amtebrazos', order: 8, exerciseIds: ['curl-muneca-sentado'] },
+    ])
+    await db.sets.bulkAdd([
+      { ts: 1, date: '2026-10-16', exerciseId: 'polea-alta-al-pecho', reps: 12, kg: 52, sessionId: 's' },
+      { ts: 2, date: '2026-10-16', exerciseId: 'polea-ajustable-hacia-la-cabeza', reps: 10, kg: 32, sessionId: 's' },
+    ])
+    const setsBefore = await db.sets.toArray()
+
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
+    const ex = id => db.exercises.get(id)
+    expect(await ex('polea-alta-al-pecho')).toMatchObject({ name: 'Lat Pulldown', names: { es: 'Jal\u00f3n al pecho' }, kg: 52, sets: 4 })
+    expect((await ex('polea-alta-al-pecho')).desc).toMatch(/^EN: .+\nES: .+\nDe 52 en adelante\.$/)
+    expect(await ex('curl-muneca-sentado')).toMatchObject({ name: 'Seated Barbell Wrist Curl', muscles: ['forearms'] })
+    expect((await ex('renamed-by-me')).name).toBe('My own row')
+
+    // Face Pull: the built-in one had no sets, so it folds into the user's
+    expect((await ex('face-pull')).archived).toBe(true)
+    const shoulders = await db.groups.get('shoulders')
+    expect(shoulders.exerciseIds).toContain('polea-ajustable-hacia-la-cabeza')
+    expect(shoulders.exerciseIds).not.toContain('face-pull')
+
+    const groups = await db.groups.orderBy('order').toArray()
+    expect(groups.find(g => g.id === 'nuevo-grupo')).toMatchObject({ name: 'Back', names: { es: 'Espalda' } })
+    expect(groups.find(g => g.id === 'nuevo-grupo-3')).toMatchObject({ name: 'Forearms', names: { es: 'Antebrazos' } })
+    // the Back pack arrives as its own group and reuses the user's renamed exercises
+    const classic = groups.at(-1)
+    expect(classic).toMatchObject({ name: 'Back (classic)', names: { es: 'Espalda (cl\u00e1sico)' } })
+    expect(classic.exerciseIds).toEqual(expect.arrayContaining(['polea-alta-al-pecho', 'remo-sentado', 'dominadas', 'polea-ajustable-hacia-la-cabeza']))
+    expect(await db.exercises.where('name').equals('Lat Pulldown').count()).toBe(1)
+
+    // built-ins got Spanish names, user data untouched
+    expect((await ex('barbell-curl')).names).toEqual({ es: 'Curl con barra' })
+    expect(await db.sets.toArray()).toEqual(setsBefore)
   })
 })

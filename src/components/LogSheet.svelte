@@ -4,6 +4,8 @@
   import Icon from './Icon.svelte'
   import { repo, notify } from '../lib/store.js'
   import { t } from '../lib/i18n.js'
+  import { settings } from '../lib/settings.js'
+  import { nameOf } from '../lib/names.js'
 
   /** `set` given: edit that logged set. Otherwise log a new one, prefilled from the last set today or the target. */
   let { exercise: ex, set = null, groupId, done, onclose } = $props()
@@ -41,7 +43,7 @@
       notify($t('saved'))
     } else {
       const id = await repo.logSet({ exerciseId: ex.id, groupId, ...values() })
-      notify(`${$t('logged')} · ${ex.name} ${index}/${ex.sets}`, { label: $t('undo'), run: () => repo.deleteSet(id) })
+      notify(`${$t('logged')} · ${nameOf(ex, $settings.lang)} ${index}/${ex.sets}`, { label: $t('undo'), run: () => repo.deleteSet(id) })
     }
     onclose()
   }
@@ -53,7 +55,7 @@
   }
 </script>
 
-<Sheet title={ex.name} {onclose}>
+<Sheet title={nameOf(ex, $settings.lang)} {onclose}>
   <form onsubmit={submit} class="stack">
     <div class="muted">{$t('set')} {index} {$t('of')} {ex.sets}{ex.perSide ? ` · ${$t('perSide')}` : ''}</div>
     <div class="field">

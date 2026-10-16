@@ -30,7 +30,7 @@
     ])
     data = recapData({
       session, sets, history, activityLogs, bestsEnabled: done >= BESTS_AFTER_SESSIONS,
-      groupsById: Object.fromEntries(groups.map(g => [g.id, g])),
+      groupsById: Object.fromEntries(groups.map(g => [g.id, g])), lang: $settings.lang,
       exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
     })

@@ -3,25 +3,29 @@
   import { t } from '../lib/i18n.js'
   import { groups } from '../lib/store.js'
   import { MUSCLES } from '../lib/seed.js'
+  import { settings } from '../lib/settings.js'
+  import { nameOf } from '../lib/names.js'
 
   /** `exercise` null creates a new one. */
   let { exercise = null, onsave, oncancel, ondelete = null } = $props()
   // the form edits a copy; nothing is written until Save
   let f = $state(untrack(() => ({ name: '', type: 'reps', sets: 3, reps: 10, seconds: 30, desc: '', link: '', ...exercise,
-    kg: exercise?.kg ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])] })))
-  const inGroups = $derived(exercise ? ($groups ?? []).filter(g => g.exerciseIds.includes(exercise.id)).map(g => g.name) : [])
+    kg: exercise?.kg ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])], nameEs: exercise?.names?.es ?? '' })))
+  const inGroups = $derived(exercise ? ($groups ?? []).filter(g => g.exerciseIds.includes(exercise.id)).map(g => nameOf(g, $settings.lang)) : [])
 
   const toggle = m => (f.muscles = f.muscles.includes(m) ? f.muscles.filter(x => x !== m) : [...f.muscles, m])
 
   const submit = e => {
     e.preventDefault()
     if (!f.name.trim()) return
-    onsave({ ...f, kg: f.kg === '' ? null : f.kg, reps: f.type === 'reps' ? f.reps : null, seconds: f.type === 'time' ? f.seconds : null })
+    const { nameEs, ...rest } = f
+    onsave({ ...rest, names: { ...exercise?.names, es: nameEs.trim() }, kg: f.kg === '' ? null : f.kg, reps: f.type === 'reps' ? f.reps : null, seconds: f.type === 'time' ? f.seconds : null })
   }
 </script>
 
 <form class="stack" onsubmit={submit}>
   <label>{$t('name')}<input bind:value={f.name} required /></label>
+  <label>{$t('nameEs')}<input bind:value={f.nameEs} /></label>
   <div class="segmented" role="group" aria-label={$t('type')}>
     <button type="button" aria-pressed={f.type === 'reps'} onclick={() => (f.type = 'reps')}>{$t('typeReps')}</button>
     <button type="button" aria-pressed={f.type === 'time'} onclick={() => (f.type = 'time')}>{$t('typeTime')}</button>

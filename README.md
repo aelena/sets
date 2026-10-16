@@ -9,19 +9,23 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 ## What it does
 
 - **Exercise groups.** Group exercises however you train ("Kettlebell Supergroup", "My Warm up Routine") and switch between groups at the top of the main screen. Exercises show in the group's order.
-- **Starter groups.** Your own Kettlebell Supergroup and warm-up, plus classic Biceps, Triceps, Shoulders, Leg Day and Core groups (curls, dips, presses, squats, planks...). Each classic exercise has a short form cue in English and Spanish (the app shows the one for the UI language) and a link to a YouTube search for good form. Weights are placeholders: edit them, or the groups, freely. Phones that already had data get the classic groups once, added after their own, without touching anything existing.
+- **Today view.** The ✓ in the top bar lists everything logged today, from any group, in one place: handy when one session mixes groups. Green when the target is reached.
+- **Names in English and Spanish.** Exercises, groups and activities can carry a Spanish name; the app shows the one for the UI language and the Excel export has both.
+- **Starter groups.** Your own Kettlebell Supergroup and warm-up, plus classic Biceps, Triceps, Shoulders, Leg Day and Core groups (curls, dips, presses, squats, planks...). A Back group was added later. Each classic exercise has a short form cue in English and Spanish (the app shows the one for the UI language) and a link to a YouTube search for good form. Weights are placeholders: edit them, or the groups, freely. Phones that already had data get the classic groups once, added after their own, without touching anything existing.
 - **One exercise, one history.** An exercise has a name, a target (sets × reps, or sets × seconds for planks, hangs and climbers), an optional weight (leave it empty for bodyweight), an optional "per side" flag, a free-text description and a video link. If an exercise is in two groups, it is still one exercise with one history.
 - **Logging a set takes two taps.** Tap **+**: reps and kg are prefilled from your last set today, or from the target. Confirm, or adjust and confirm. A counter shows `2/5` per exercise; "Undo" is offered right after each set, and any logged set can be edited or deleted.
 - **Last time, at a glance.** Under each exercise: `last: 10 · 10 · 9 @16kg · Wed`, the sets of the most recent earlier day.
-- **Personal bests.** A small flame marks a set that no earlier set matched on both weight and reps (or seconds). Nothing flames on an exercise's first day.
-- **Activities.** Running, Rowing and Gym Bike come preloaded under the exercise list, and "Other activity…" takes any name and keeps it for next time. Log a duration, a distance and a pace (min/km): fill any two and the third is worked out ("30 min at 6'" → 5 km). Pace accepts `6`, `6:00`, `6'` or `6'30"`. Activities show in the session summary, the recap image, History and Progress (minutes, km, pace), and in their own Excel sheet. Rename or remove them under Edit → Activity.
+- **Personal bests.** A small flame marks a set that no earlier set matched on both weight and reps (or seconds). Flames only start showing once 12 sessions are completed, and never on an exercise's first day.
+- **Activities.** Running, Rowing and Gym Bike live in their own tab after the groups ("Cardio & more"), and "Other activity…" takes any name and keeps it for next time. Log a duration, a distance and a pace (min/km): fill any two and the third is worked out ("30 min at 6'" → 5 km). Pace accepts `6`, `6:00`, `6'` or `6'30"`. Activities show in the session summary, the recap image, History and Progress (minutes, km, pace), and in their own Excel sheet. Rename or remove them under Edit → Activity.
 - **Sessions are optional.** ▶ starts a session and ■ stops it. Sets logged outside a session (between meetings, say) are kept with their date and time. A session left running is closed automatically after two hours without activity, at the time of its last set.
 - **Rest timer.** The hourglass turns the screen into a big stopwatch with a stop button. During a session, rests are counted and summarised when the session stops; outside a session they are not kept.
 - **Session summary.** Stopping a session shows, and stores as plain text: duration, sets, exercises, volume, rest count / total / average / longest, and every exercise's sets. The same sheet has a **Back up** button and says how long ago the last backup was.
-- **Recap image for Instagram.** From the summary, or from any session in History: a 1080×1920 story or 1080×1350 post with the date, duration, sets, volume, personal bests and the exercise list, drawn over a gradient, a bundled photo or one picked from Photos. **Share** opens the iOS share sheet, where Instagram is one of the targets.
+- **Muscles.** Exercises can be tagged with the muscles they work (built-in ones come tagged). The recap uses them.
+- **Recap image for Instagram.** From the summary, or from any session in History: a 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, the muscles trained, personal bests) or **Full** (plus every exercise), drawn over a gradient, a bundled photo or one picked from Photos. **Share** opens the iOS share sheet, where Instagram is one of the targets.
 - **Notes.** The speech bubble opens a notes box tied to the running session, or to the day. To dictate, use the microphone on the iPhone keyboard.
 - **Calendar.** Under Progress: a month view where days with a session are solid blue squares with white numbers, in light and dark mode. Days with only ad-hoc training get a blue outline. Tap a day to see what was done.
 - **Progress.** A chart per exercise (volume, heaviest weight, total reps or seconds, sets per day), with a table of the same numbers, and a day-by-day history of sessions, sets and notes.
+- **Session data to Google Drive.** The session summary has **Export session data** (raw JSON through the share sheet: Files, the Google Drive app, AirDrop) and, once set up, **Upload to Google Drive**, straight into a `Sets` folder. Settings can upload every session automatically when it stops. See [Google Drive](#google-drive).
 - **Export / import.**
   - Sets to **Excel (.xlsx)**, one row per set. It is a real workbook, not a CSV, so Excel in a Spanish or other European locale opens it correctly.
   - The **exercise config as JSON**, to edit groups on a computer and import them back (merge or replace).
@@ -33,6 +37,16 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 1. Open **https://aelena.com/sets/** in **Safari** (or your own deployment; it must be served over HTTPS, see [Deploy](#deploy)).
 2. Share → **Add to Home Screen**.
 3. Open it from the home screen. From then on it runs full screen and offline.
+
+## Library updates never touch your data
+
+Built-in groups arrive as *packs*, each applied once per phone and only ever added:
+
+- an exercise you already have (same id or same name) is reused, never changed;
+- a built-in group whose name you already use is added next to yours, e.g. "Back (classic)";
+- nothing is deleted, renamed or overwritten, and logged sets always keep pointing at their exercise.
+
+Two kinds of later fixes are fill-only: muscles and Spanish names are added where an exercise has none. A one-time curation step (`curate-1`) renamed the first hand-built exercises properly, guarded by their exact original id and name, so it does nothing on any other phone and never undoes a later edit. Restoring a backup made before packs existed applies only the packs added since.
 
 ## Your data
 
@@ -79,6 +93,19 @@ Sheet `sets`, one row per set:
 |---|---|---|---|---|---|---|---|---|---|---|
 
 `set_no` counts within the day and exercise. `volume_kg` is reps × kg. Sheets `activities` (date, time, activity, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
+
+## Google Drive
+
+Uploading straight to Drive needs an OAuth client ID that you own (the share-sheet export works without it):
+
+1. In [Google Cloud console](https://console.cloud.google.com/) create a project and enable the **Google Drive API**.
+2. **OAuth consent screen**: External; add the scope `.../auth/drive.file` and yourself as a test user.
+3. **Credentials → Create credentials → OAuth client ID → Web application**:
+   - Authorized JavaScript origins: `https://aelena.com` (your host)
+   - Authorized redirect URIs: `https://aelena.com/sets/` (the app's exact URL)
+4. Paste the client ID in **Settings → Google Drive** and tap **Connect Google Drive**.
+
+The app uses the `drive.file` scope: it can see and create only its own files, in one `Sets` folder. Sign-in is a full-page redirect (popups are unreliable in home-screen apps) and the token lasts an hour; after that the next upload asks you to sign in again. The client ID can also be baked in at build time as `VITE_GOOGLE_CLIENT_ID`.
 
 ## Development
 

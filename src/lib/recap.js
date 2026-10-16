@@ -1,6 +1,7 @@
 import { compact, personalBests } from './history.js'
 import { volume } from './summary.js'
 import { activityLabel } from './activity.js'
+import { nameById, nameOf } from './names.js'
 
 export const FORMATS = { story: [1080, 1920], post: [1080, 1350] }
 export const GRADIENTS = {
@@ -13,7 +14,7 @@ export const GRADIENTS = {
  * Everything the recap image shows, from one session.
  * `history` is all sets of the exercises involved, so personal bests are judged against the past.
  */
-export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {}, bestsEnabled = true, groupsById = {} }) {
+export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {}, bestsEnabled = true, groupsById = {}, lang = 'en' }) {
   const mine = [...sets].sort((a, b) => a.ts - b.ts)
   const order = [...new Set(mine.map(s => s.exerciseId))]
   const bests = bestsEnabled ? new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id))])) : new Set()
@@ -23,7 +24,7 @@ export function recapData({ session, sets, history = sets, exercisesById, activi
   for (const s of mine) {
     const ms = exercisesById[s.exerciseId]?.muscles
     if (ms?.length) ms.forEach((m, i) => bump(`mu:${m}`, i === 0 ? 1 : 0.5))
-    else if (groupsById[s.groupId]) bump(`group:${groupsById[s.groupId].name}`, 1)
+    else if (groupsById[s.groupId]) bump(`group:${nameOf(groupsById[s.groupId], lang)}`, 1)
   }
   const muscles = [...tally].sort((a, b) => b[1] - a[1]).map(([k]) => k)
 
@@ -38,9 +39,9 @@ export function recapData({ session, sets, history = sets, exercisesById, activi
     bests: mine.filter(s => bests.has(s.id)).length,
     lines: order.map(id => {
       const list = mine.filter(s => s.exerciseId === id)
-      return { name: exercisesById[id]?.name ?? id, detail: compact(list), best: list.some(s => bests.has(s.id)) }
+      return { name: nameById(exercisesById, id, lang), detail: compact(list), best: list.some(s => bests.has(s.id)) }
     }).concat([...activityLogs].sort((a, b) => a.ts - b.ts).map(l => (
-      { name: activitiesById[l.activityId]?.name ?? l.activityId, detail: activityLabel(l), best: false }))),
+      { name: nameById(activitiesById, l.activityId, lang), detail: activityLabel(l), best: false }))),
   }
 }
 

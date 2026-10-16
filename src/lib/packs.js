@@ -1,5 +1,6 @@
 import { normalizeConfig } from './config.js'
 import { slugify } from './time.js'
+import { CLASH_LABEL } from './catalog.js'
 
 /**
  * What applying a built-in pack adds to a library. Add-only, by design:
@@ -15,16 +16,20 @@ export function planPack(pack, { exercises, groups }) {
   const takenIds = new Set(groups.map(g => g.id))
   const takenNames = new Set(groups.map(g => g.name.toLowerCase()))
   const addGroups = incoming.groups.map((g, i) => {
-    let name = g.name
-    if (takenNames.has(name.toLowerCase())) name = `${g.name} (${pack.label})`
-    let n = 2
-    while (takenNames.has(name.toLowerCase())) name = `${g.name} (${pack.label} ${n++})`
+    const label = CLASH_LABEL[pack.label] ?? { en: pack.label, es: pack.label }
+    let name = g.name, names = g.names, n = 1
+    while (takenNames.has(name.toLowerCase())) {
+      const k = n === 1 ? '' : ` ${n}`
+      n++
+      name = `${g.name} (${label.en}${k})`
+      if (g.names?.es) names = { ...g.names, es: `${g.names.es} (${label.es}${k})` }
+    }
+    let n2 = 2
     let id = takenIds.has(g.id) ? slugify(name) : g.id
-    n = 2
-    while (takenIds.has(id)) id = `${slugify(name)}-${n++}`
+    while (takenIds.has(id)) id = `${slugify(name)}-${n2++}`
     takenIds.add(id)
     takenNames.add(name.toLowerCase())
-    return { ...g, id, name, order: groups.length + i }
+    return { ...g, id, name, ...(names ? { names } : {}), order: groups.length + i }
   })
   return { addExercises, addGroups }
 }
@@ -35,3 +40,42 @@ export function planPack(pack, { exercises, groups }) {
  */
 export const missingMuscles = (exercises, catalog) =>
   exercises.filter(e => e.muscles === undefined && catalog[e.name.toLowerCase()]).map(e => ({ id: e.id, muscles: catalog[e.name.toLowerCase()] }))
+
+const norm = s => String(s ?? '').normalize('NFC').trim().toLowerCase()
+
+/**
+ * Spanish names for exercises, groups or activities that have none, by exact English name.
+ * Never replaces a name the user wrote.
+ */
+export const missingNames = (items, es) =>
+  items.filter(x => !x.names?.es && es[x.name]).map(x => ({ id: x.id, names: { ...x.names, es: es[x.name] } }))
+
+/**
+ * What a curation pack changes: each entry applies only while the item still has its original
+ * id and name, so it is a no-op elsewhere and never overrides a later edit. A merge folds a
+ * never-used duplicate into the exercise that carries history: group references move, the
+ * duplicate is archived. A duplicate with any sets of its own is left alone.
+ */
+export function planCuration(pack, { exercises, groups, setCounts = {} }) {
+  const exById = new Map(exercises.map(e => [e.id, e]))
+  const grById = new Map(groups.map(g => [g.id, g]))
+  const exerciseUpdates = (pack.exercises ?? [])
+    .filter(u => exById.has(u.id) && norm(exById.get(u.id).name) === norm(u.from))
+    .map(u => ({ id: u.id, changes: u.set }))
+  const groupUpdates = (pack.groups ?? [])
+    .filter(u => grById.has(u.id) && norm(grById.get(u.id).name) === norm(u.from))
+    .map(u => ({ id: u.id, changes: u.set }))
+  const merges = (pack.merges ?? []).filter(m => {
+    const from = exById.get(m.from), into = exById.get(m.into)
+    return from && into && !from.archived && norm(from.name) === norm(m.fromName) && !(setCounts[m.from] > 0)
+  })
+  const archive = merges.map(m => m.from)
+  const regroup = groups
+    .filter(g => merges.some(m => g.exerciseIds.includes(m.from)))
+    .map(g => {
+      let ids = g.exerciseIds
+      for (const m of merges) ids = ids.map(x => (x === m.from ? m.into : x))
+      return { id: g.id, exerciseIds: [...new Set(ids)] }
+    })
+  return { exerciseUpdates, groupUpdates, archive, regroup }
+}

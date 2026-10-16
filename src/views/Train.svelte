@@ -14,12 +14,15 @@
   import NotesSheet from '../components/NotesSheet.svelte'
   import ActivitySheet from '../components/ActivitySheet.svelte'
   import { activityLabel } from '../lib/activity.js'
+  import { nameOf } from '../lib/names.js'
 
   let logging = $state(null) // { exercise, set? }
   let notesOpen = $state(false)
   let doing = $state(null) // { activity | null, log?, last? }
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
+  const ACTIVITIES_TAB = '__activities'
+  const onActivities = $derived(!$settings.todayOnly && $settings.groupId === ACTIVITIES_TAB)
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
   const todayKey = $derived(dateKey($now))
 
@@ -32,7 +35,7 @@
   })
   const todayOnly = $derived(!!$settings.todayOnly)
   const todayIds = $derived([...new Set(todaySets.map(s => s.exerciseId))])
-  const ids = $derived(todayOnly ? todayIds : (group?.exerciseIds ?? []))
+  const ids = $derived(todayOnly ? todayIds : onActivities ? [] : (group?.exerciseIds ?? []))
   const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || !e.archived)))
   /** In Today mode a new set goes to the group the exercise was last logged from today. */
   const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : group?.id)
@@ -56,6 +59,7 @@
     return out
   })
   const empty = { today: [], last: null, bests: new Set() }
+  const todayActivities = $derived(($activities ?? []).filter(a => ($activityLogs ?? []).some(l => l.activityId === a.id && l.date === todayKey)))
 
   const perActivity = $derived.by(() => {
     const out = {}
@@ -99,8 +103,9 @@
   {:else if $groups?.length}
     <div class="groups" role="tablist">
       {#each $groups as g (g.id)}
-        <button role="tab" aria-selected={g.id === group?.id} onclick={() => ($settings.groupId = g.id)}>{g.name}</button>
+        <button role="tab" aria-selected={!onActivities && g.id === group?.id} onclick={() => ($settings.groupId = g.id)}>{nameOf(g, $settings.lang)}</button>
       {/each}
+      <button role="tab" class="act-tab" aria-selected={onActivities} onclick={() => ($settings.groupId = ACTIVITIES_TAB)}>{$t('activitiesTab')}</button>
     </div>
   {/if}
 </header>
@@ -113,8 +118,12 @@
     </div>
   {/if}
 
-  {#if todayOnly && !list.length}
+  {#if onActivities}
+    <!-- activities have their own tab: rarely used, out of the way of the groups -->
+  {:else if todayOnly && !list.length && !todayActivities.length}
     <p class="muted">{$t('nothingToday')}</p>
+  {:else if todayOnly && !list.length}
+    <!-- only activities today -->
   {:else if !$groups?.length}
     <p class="muted">{$t('noGroups')}</p>
   {:else if !list.length}
@@ -131,17 +140,18 @@
     </ul>
   {/if}
 
-  <h2>{$t('activities')}</h2>
+  {#if onActivities || (todayOnly && todayActivities.length)}
+  {#if todayOnly}<h2>{$t('activities')}</h2>{/if}
   <ul class="list card">
-    {#each $activities ?? [] as a (a.id)}
+    {#each todayOnly ? todayActivities : $activities ?? [] as a (a.id)}
       {@const h = perActivity[a.id] ?? { today: [], last: null }}
       <li class="activity">
         <div class="row">
           <div class="grow name">
-            <span class="aname">{a.name}</span>
+            <span class="aname">{nameOf(a, $settings.lang)}</span>
             {#if h.last}<span class="muted small" data-testid="activity-last">{$t('last')}: {activityLabel(h.last)}</span>{/if}
           </div>
-          <button class="icon primary" aria-label="{$t('logActivity')}: {a.name}"
+          <button class="icon primary" aria-label="{$t('logActivity')}: {nameOf(a, $settings.lang)}"
             onclick={() => (doing = { activity: a, last: h.today.at(-1) ?? h.last })}><Icon name="plus" /></button>
         </div>
         {#if h.today.length}
@@ -153,10 +163,13 @@
         {/if}
       </li>
     {/each}
-    <li class="activity">
-      <button class="ghost other" onclick={() => (doing = { activity: null })}>{$t('otherActivity')}</button>
-    </li>
+    {#if !todayOnly}
+      <li class="activity">
+        <button class="ghost other" onclick={() => (doing = { activity: null })}>{$t('otherActivity')}</button>
+      </li>
+    {/if}
   </ul>
+  {/if}
 </main>
 
 {#if logging}
@@ -178,6 +191,7 @@
   .groups { display: flex; gap: 6px; overflow-x: auto; margin: 10px -16px 0; padding: 0 16px; scrollbar-width: none; }
   .groups::-webkit-scrollbar { display: none; }
   .groups button { white-space: nowrap; min-height: 36px; border-radius: 999px; flex: none; }
+  .act-tab { border-style: dashed; }
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }

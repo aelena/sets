@@ -22,7 +22,11 @@ export default defineConfig({
         background_color: '#111111',
         theme_color: '#111111',
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'],
+        globIgnores: ['**/apple-splash-*.png'], // iOS reads launch images at install, not offline
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
     }),
   ],
   test: { include: ['tests/unit/**/*.test.js'], environment: 'node' },

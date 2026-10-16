@@ -13,6 +13,7 @@
   import Progress from './views/Progress.svelte'
   import Edit from './views/Edit.svelte'
   import Settings from './views/Settings.svelte'
+  import Splash from './components/Splash.svelte'
 
   let ready = $state(false)
 
@@ -42,4 +43,6 @@
   {#if $activeRest}<RestTimer rest={$activeRest} />{/if}
   {#if $shownSummary}<SummaryModal session={$shownSummary} onclose={() => shownSummary.set(null)} />{/if}
   <Toast />
+{:else}
+  <Splash />
 {/if}

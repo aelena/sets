@@ -9,6 +9,7 @@
   import Chart from '../components/Chart.svelte'
   import RecapSheet from '../components/RecapSheet.svelte'
   import Calendar from '../components/Calendar.svelte'
+  import { nameOf, nameById } from '../lib/names.js'
 
   let seg = $state('charts')
   let exId = $state(null)
@@ -26,8 +27,8 @@
   const acById = $derived(Object.fromEntries(($allActivities ?? []).map(a => [a.id, a])))
   // exercises and activities with anything logged, one picker; keys are prefixed so ids cannot collide
   const withData = $derived([
-    ...[...new Set(($sets ?? []).map(s => s.exerciseId))].map(id => exById[id]).filter(Boolean).map(e => ({ key: `e:${e.id}`, name: e.name, exercise: e })),
-    ...[...new Set(($logs ?? []).map(l => l.activityId))].map(id => acById[id]).filter(Boolean).map(a => ({ key: `a:${a.id}`, name: a.name, activity: a })),
+    ...[...new Set(($sets ?? []).map(s => s.exerciseId))].map(id => exById[id]).filter(Boolean).map(e => ({ key: `e:${e.id}`, name: nameOf(e, $settings.lang), exercise: e })),
+    ...[...new Set(($logs ?? []).map(l => l.activityId))].map(id => acById[id]).filter(Boolean).map(a => ({ key: `a:${a.id}`, name: nameOf(a, $settings.lang), activity: a })),
   ].sort((a, b) => a.name.localeCompare(b.name)))
   const ex = $derived(withData.find(e => e.key === exId) ?? withData[0])
   const mine = $derived(ex?.exercise ? ($sets ?? []).filter(s => s.exerciseId === ex.exercise.id) : ($logs ?? []).filter(l => l.activityId === ex?.activity?.id))
@@ -50,8 +51,8 @@
     return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)).map(d => {
       const counts = new Map()
       d.sets.forEach(s => counts.set(s.exerciseId, (counts.get(s.exerciseId) ?? 0) + 1))
-      return { ...d, counts: [...counts].map(([id, n]) => `${exById[id]?.name ?? id} ×${n}`)
-        .concat(d.logs.sort((a, b) => a.ts - b.ts).map(l => `${acById[l.activityId]?.name ?? l.activityId} ${activityLabel(l)}`)) }
+      return { ...d, counts: [...counts].map(([id, n]) => `${nameById(exById, id, $settings.lang)} ×${n}`)
+        .concat(d.logs.sort((a, b) => a.ts - b.ts).map(l => `${nameById(acById, l.activityId, $settings.lang)} ${activityLabel(l)}`)) }
     })
   })
   const history = $derived(allDays.slice(0, 90))

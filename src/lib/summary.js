@@ -1,5 +1,6 @@
 import { duration, hhmm, dateKey } from './time.js'
 import { activityLabel } from './activity.js'
+import { nameById } from './names.js'
 
 /** What one logged set amounts to, in the exercise's own unit. */
 export const setLabel = s =>
@@ -32,9 +33,9 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
     lines.push(`${L.rest}: ${done.length}× · ${duration(total)} ${L.total} · ${L.avg} ${duration(total / done.length)} · ${L.longest} ${duration(Math.max(...restMs))}`)
   for (const id of order) {
     const list = byEx.get(id)
-    lines.push(`${exercisesById[id]?.name ?? id}: ${list.map(setLabel).join(', ')}`)
+    lines.push(`${nameById(exercisesById, id, L.lang)}: ${list.map(setLabel).join(', ')}`)
   }
   for (const a of [...activityLogs].sort((x, y) => x.ts - y.ts))
-    lines.push(`${activitiesById[a.activityId]?.name ?? a.activityId}: ${activityLabel(a)}${a.notes ? ` (${a.notes})` : ''}`)
+    lines.push(`${nameById(activitiesById, a.activityId, L.lang)}: ${activityLabel(a)}${a.notes ? ` (${a.notes})` : ''}`)
   return lines.join('\n')
 }

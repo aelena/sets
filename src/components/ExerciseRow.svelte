@@ -5,6 +5,7 @@
   import { setLabel } from '../lib/summary.js'
   import { compact } from '../lib/history.js'
   import { localDesc } from '../lib/seed.js'
+  import { nameOf } from '../lib/names.js'
 
   let { exercise: ex, sets, last = null, bests = new Set(), onlog, onedit } = $props()
   let open = $state(false)
@@ -26,13 +27,13 @@
 
 <div class="row main">
   <button class="ghost grow name" onclick={() => (open = !open)} aria-expanded={open}>
-    <span class="title">{ex.name}</span>
+    <span class="title">{nameOf(ex, $settings.lang)}</span>
     <span class="muted small">{target}</span>
     {#if last}<span class="last small" data-testid="last">{$t('last')}: {compact(last.sets)} · {when}</span>{/if}
   </button>
   {#if bestToday}<span class="flame" title={$t('best')}><Icon name="flame" size={18} /></span>{/if}
   <span class="count" class:done data-testid="count">{sets.length}/{ex.sets}</span>
-  <button class="icon primary plus" aria-label="{$t('logSet')}: {ex.name}" onclick={onlog}><Icon name="plus" /></button>
+  <button class="icon primary plus" aria-label="{$t('logSet')}: {nameOf(ex, $settings.lang)}" onclick={onlog}><Icon name="plus" /></button>
 </div>
 
 {#if open}

@@ -14,7 +14,7 @@ test('seeded groups show in order and switch', async ({ page }) => {
   await page.getByRole('tab', { name: 'My Warm up Routine' }).click()
   await expect(page.locator('.title')).toHaveText(['Arm superseries', 'Disc routine'])
   await page.getByRole('button', { name: /Disc routine/ }).first().click()
-  await expect(page.getByText('Superserie con disco')).toBeVisible()
+  await expect(page.getByText(/^Plate superseries: front, lateral and halos/)).toBeVisible()
 })
 
 test('log a set prefilled from the target, undo it, then edit one', async ({ page }) => {
@@ -76,7 +76,7 @@ test('edit a group: add a timed exercise and reorder', async ({ page }) => {
   await page.getByRole('button', { name: 'Edit' }).click()
   await page.getByRole('button', { name: /My Warm up Routine/ }).click()
   await page.getByRole('button', { name: 'New exercise' }).click()
-  await page.getByLabel('Name').fill('Plank')
+  await page.getByLabel('Name', { exact: true }).fill('Plank')
   await page.getByRole('button', { name: 'Time', exact: true }).click()
   await page.getByLabel('Seconds').fill('60')
   await page.getByRole('button', { name: 'Save' }).click()
@@ -160,6 +160,8 @@ test('summary offers a backup and a shareable recap image', async ({ page }) => 
 
 test('log running from duration and pace, an other activity, both in the summary', async ({ page }) => {
   await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('tab', { name: 'Cardio & more' }).click()
+  await expect(page.locator('.title')).toHaveCount(0) // the activities tab shows no exercises
   await page.getByRole('button', { name: 'Log activity: Running' }).click()
   await page.getByLabel('Duration (min)').fill('30')
   await page.getByLabel('Pace (min/km)').fill("6'")
@@ -236,7 +238,7 @@ test('classic groups come with a description in the UI language and a form link'
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Español' }).click()
   await page.getByRole('button', { name: 'Entrenar' }).click()
-  await page.getByRole('button', { name: /^Dips/ }).click()
+  await page.getByRole('button', { name: /^Fondos/ }).click() // names follow the UI language too
   await expect(page.getByText(/^Torso erguido para tríceps/)).toBeVisible()
   await expect(page.getByText(/^Upright torso/)).toHaveCount(0)
 })
@@ -259,4 +261,15 @@ test('Today toggle lists what was done today across groups', async ({ page }) =>
 
   await page.getByRole('button', { name: 'Only what I did today' }).click()
   await expect(page.getByRole('tab', { name: 'Biceps' })).toBeVisible()
+})
+
+test('Spanish UI shows Spanish names; the activities tab sits after the groups', async ({ page }) => {
+  await expect(page.getByRole('tab').last()).toHaveText('Cardio & more')
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Español' }).click()
+  await page.getByRole('button', { name: 'Entrenar' }).click()
+  await page.getByRole('tab', { name: 'Espalda' }).click()
+  await expect(page.locator('.title').first()).toHaveText('Peso muerto')
+  await page.getByRole('tab', { name: 'Cardio y más' }).click()
+  await expect(page.locator('.aname')).toHaveText(['Bici estática', 'Remo', 'Correr'])
 })

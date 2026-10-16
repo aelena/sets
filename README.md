@@ -24,7 +24,7 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 
 ## Install on an iPhone
 
-1. Open the app's URL in **Safari** (it must be served over HTTPS; see [Deploy](#deploy)).
+1. Open **https://aelena.com/set-tracker/** in **Safari** (or your own deployment; it must be served over HTTPS, see [Deploy](#deploy)).
 2. Share → **Add to Home Screen**.
 3. Open it from the home screen. From then on it runs full screen and offline.
 

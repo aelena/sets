@@ -1,12 +1,13 @@
 <script>
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
-  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
-  import { lastDay, personalBests } from '../lib/history.js'
+  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, completedSessions, now, shownSummary } from '../lib/store.js'
+  import { lastDay, personalBests, BESTS_AFTER_SESSIONS } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords } from '../lib/i18n.js'
   import { clock, dateKey } from '../lib/time.js'
   import { backupNow, daysSince } from '../lib/backup.js'
+  import { uploadSession, driveReady } from '../lib/sessionFiles.js'
   import Icon from '../components/Icon.svelte'
   import ExerciseRow from '../components/ExerciseRow.svelte'
   import LogSheet from '../components/LogSheet.svelte'
@@ -20,15 +21,28 @@
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
-  const list = $derived((group?.exerciseIds ?? []).map(id => exById[id]).filter(e => e && !e.archived))
-  // every set ever logged for this group's exercises: today's progress, last time, personal bests
-  let history = $state([])
+  const todayKey = $derived(dateKey($now))
+
+  // Today mode: every exercise with a set today, any group, in the order first done
+  let todaySets = $state([])
   $effect(() => {
-    const ids = group?.exerciseIds ?? []
-    const sub = liveQuery(() => db.sets.where('exerciseId').anyOf(ids).toArray()).subscribe(v => (history = v))
+    const day = todayKey
+    const sub = liveQuery(() => db.sets.where('date').equals(day).sortBy('ts')).subscribe(v => (todaySets = v))
     return () => sub.unsubscribe()
   })
-  const todayKey = $derived(dateKey($now))
+  const todayOnly = $derived(!!$settings.todayOnly)
+  const todayIds = $derived([...new Set(todaySets.map(s => s.exerciseId))])
+  const ids = $derived(todayOnly ? todayIds : (group?.exerciseIds ?? []))
+  const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || !e.archived)))
+  /** In Today mode a new set goes to the group the exercise was last logged from today. */
+  const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : group?.id)
+  // every set ever logged for the listed exercises: today's progress, last time, personal bests
+  let history = $state([])
+  $effect(() => {
+    const want = ids
+    const sub = liveQuery(() => db.sets.where('exerciseId').anyOf(want).toArray()).subscribe(v => (history = v))
+    return () => sub.unsubscribe()
+  })
   const perExercise = $derived.by(() => {
     const out = {}
     for (const ex of list) {
@@ -36,7 +50,7 @@
       out[ex.id] = {
         today: mine.filter(s => s.date === todayKey).sort((a, b) => a.ts - b.ts),
         last: lastDay(mine, todayKey),
-        bests: personalBests(mine),
+        bests: ($completedSessions ?? 0) >= BESTS_AFTER_SESSIONS ? personalBests(mine) : new Set(),
       }
     }
     return out
@@ -59,6 +73,7 @@
   const stop = async () => {
     const closed = await repo.stopSession(summaryWords(get(t)))
     if (closed) shownSummary.set(closed)
+    if (closed && $settings.driveAuto && driveReady()) uploadSession(closed.id, { quiet: true })
   }
 
 </script>
@@ -74,10 +89,14 @@
   <div class="controls">
     <button class="icon" aria-label={$t('startSession')} disabled={!!$activeSession} onclick={() => repo.startSession()}><Icon name="play" /></button>
     <button class="icon" aria-label={$t('stopSession')} disabled={!$activeSession} onclick={stop}><Icon name="stop" /></button>
-    <button class="icon" aria-label={$t('rest')} onclick={() => repo.startRest()}><Icon name="rest" /></button>
+    <button class="icon" aria-label={$t('rest')} onclick={() => repo.startRest()}><Icon name="pause" /></button>
     <button class="icon" aria-label={$t('notes')} onclick={() => (notesOpen = true)}><Icon name="bubble" /></button>
+    <span class="grow"></span>
+    <button class="icon toggle" aria-label={$t('todayOnly')} aria-pressed={todayOnly} onclick={() => ($settings.todayOnly = !todayOnly)}><Icon name="check" /></button>
   </div>
-  {#if $groups?.length}
+  {#if todayOnly}
+    <div class="today-bar small" data-testid="today-bar">{$t('todayOnlyOn')}</div>
+  {:else if $groups?.length}
     <div class="groups" role="tablist">
       {#each $groups as g (g.id)}
         <button role="tab" aria-selected={g.id === group?.id} onclick={() => ($settings.groupId = g.id)}>{g.name}</button>
@@ -94,7 +113,9 @@
     </div>
   {/if}
 
-  {#if !$groups?.length}
+  {#if todayOnly && !list.length}
+    <p class="muted">{$t('nothingToday')}</p>
+  {:else if !$groups?.length}
     <p class="muted">{$t('noGroups')}</p>
   {:else if !list.length}
     <p class="muted">{$t('noExercises')}</p>
@@ -139,7 +160,7 @@
 </main>
 
 {#if logging}
-  <LogSheet exercise={logging.exercise} set={logging.set} groupId={group?.id}
+  <LogSheet exercise={logging.exercise} set={logging.set} groupId={groupFor(logging.exercise.id)}
     done={(perExercise[logging.exercise.id] ?? empty).today} onclose={() => (logging = null)} />
 {/if}
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
@@ -160,6 +181,8 @@
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
+  .toggle[aria-pressed='true'] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
+  .today-bar { max-width: 608px; margin: 10px auto 0; color: var(--ok); font-weight: 700; }
   .activity { padding: 6px 8px 6px 12px; }
   .activity .name { display: grid; gap: 2px; }
   .aname { font-weight: 700; }

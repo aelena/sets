@@ -61,3 +61,17 @@ describe('recapData', () => {
     ])
   })
 })
+
+describe('recapData muscles', () => {
+  it('ranks muscles by sets, falling back to the group name for untagged exercises', () => {
+    const a = set('2026-10-16', 8, 100, { exerciseId: 'dl' })
+    const b = set('2026-10-16', 8, 100, { exerciseId: 'dl' })
+    const c = set('2026-10-16', 10, 16, { exerciseId: 'halos', groupId: 'kb' })
+    const r = recapData({
+      session: { start: 0, end: 1 }, sets: [a, b, c],
+      exercisesById: { dl: { name: 'Deadlift', muscles: ['back', 'hamstrings'] }, halos: { name: 'Halos' } },
+      groupsById: { kb: { name: 'Kettlebell Supergroup' } },
+    })
+    expect(r.muscles).toEqual(['mu:back', 'mu:hamstrings', 'group:Kettlebell Supergroup'])
+  })
+})

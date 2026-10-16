@@ -32,7 +32,7 @@ const fit = (ctx, text, max) => {
  * Draw the recap on a canvas sized for Instagram.
  * background: { gradient: [from, to] } or { image: HTMLImageElement }.
  */
-export async function drawRecap(data, { format = 'story', background, family, lang, userName = '', L }) {
+export async function drawRecap(data, { format = 'story', detail = 'full', background, family, lang, userName = '', L }) {
   const [W, H] = FORMATS[format]
   const story = format === 'story'
   const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H })
@@ -83,10 +83,14 @@ export async function drawRecap(data, { format = 'story', background, family, la
   const lineH = story ? 66 : 58
   const topLimit = story ? 360 : 260
   const bottom = H - (story ? 280 : 150)
-  const fixed = 110 + 46 + (data.bests ? 82 : 0) + (data.lines.length ? (story ? 110 : 84) : 0)
+  // sparse: no exercise list, the muscles trained carry the story
+  const lines = detail === 'sparse' ? [] : data.lines
+  const muscles = (data.muscles ?? []).slice(0, detail === 'sparse' ? 4 : 3).map(L.muscle)
+  const musclePx = detail === 'sparse' ? 48 : 36
+  const fixed = 110 + 46 + (muscles.length ? musclePx + 44 : 0) + (data.bests ? 82 : 0) + (lines.length ? (story ? 110 : 84) : 0)
   const room = Math.max(0, Math.floor((bottom - topLimit - durPx * 0.75 - fixed) / lineH) + 1)
-  const shown = data.lines.length > room ? data.lines.slice(0, Math.max(0, room - 1)) : data.lines
-  const listed = shown.length + (shown.length < data.lines.length ? 1 : 0)
+  const shown = lines.length > room ? lines.slice(0, Math.max(0, room - 1)) : lines
+  const listed = shown.length + (shown.length < lines.length ? 1 : 0)
   y = bottom - fixed - Math.max(0, listed - 1) * lineH
 
   ctx.fillStyle = white
@@ -109,6 +113,13 @@ export async function drawRecap(data, { format = 'story', background, family, la
   })
   y += 46
 
+  if (muscles.length) {
+    y += musclePx + 44
+    ctx.fillStyle = white
+    ctx.font = font(700, musclePx)
+    ctx.fillText(fit(ctx, muscles.join(' · '), inner), pad, y)
+  }
+
   const flame = (x, top, size) => {
     ctx.save()
     ctx.translate(x, top)
@@ -125,7 +136,7 @@ export async function drawRecap(data, { format = 'story', background, family, la
     ctx.fillText(data.bests === 1 ? L.bestOne : `${data.bests} ${L.bests}`, pad + 60, y)
   }
 
-  if (data.lines.length) {
+  if (lines.length) {
     y += story ? 110 : 84
     ctx.strokeStyle = 'rgba(255,255,255,.25)'
     ctx.lineWidth = 2
@@ -147,10 +158,10 @@ export async function drawRecap(data, { format = 'story', background, family, la
     if (line.best) flame(pad + ctx.measureText(name).width + 10, y - 30, 34)
     y += lineH
   }
-  if (shown.length < data.lines.length) {
+  if (shown.length < lines.length) {
     ctx.fillStyle = dim
     ctx.font = font(400, 32)
-    ctx.fillText(L.more(data.lines.length - shown.length), pad, y)
+    ctx.fillText(L.more(lines.length - shown.length), pad, y)
   }
 
   const footer = H - (story ? 170 : pad)

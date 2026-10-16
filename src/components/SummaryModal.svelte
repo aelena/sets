@@ -5,6 +5,7 @@
   import { settings } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { backupNow, daysSince } from '../lib/backup.js'
+  import { shareSession, uploadSession, driveReady } from '../lib/sessionFiles.js'
 
   let { session, onclose } = $props()
   let recap = $state(false)
@@ -21,6 +22,8 @@
   <div class="grid">
     <button class="primary" onclick={() => (recap = true)}>{$t('shareImage')}</button>
     <button onclick={backupNow}>{$t('backupNow')}</button>
+    <button onclick={() => shareSession(session.id)}>{$t('exportSession')}</button>
+    {#if driveReady()}<button onclick={() => uploadSession(session.id)}>{$t('uploadDrive')}</button>{/if}
     <button onclick={copy}>{$t('copy')}</button>
     <button onclick={onclose}>{$t('close')}</button>
   </div>

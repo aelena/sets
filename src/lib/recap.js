@@ -13,12 +13,23 @@ export const GRADIENTS = {
  * Everything the recap image shows, from one session.
  * `history` is all sets of the exercises involved, so personal bests are judged against the past.
  */
-export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {} }) {
+export function recapData({ session, sets, history = sets, exercisesById, activityLogs = [], activitiesById = {}, bestsEnabled = true, groupsById = {} }) {
   const mine = [...sets].sort((a, b) => a.ts - b.ts)
   const order = [...new Set(mine.map(s => s.exerciseId))]
-  const bests = new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id))]))
+  const bests = bestsEnabled ? new Set(order.flatMap(id => [...personalBests(history.filter(s => s.exerciseId === id))])) : new Set()
+  // muscles trained, by number of sets; exercises without muscles count under the group they were logged from
+  const tally = new Map()
+  const bump = (k, v) => tally.set(k, (tally.get(k) ?? 0) + v)
+  for (const s of mine) {
+    const ms = exercisesById[s.exerciseId]?.muscles
+    if (ms?.length) ms.forEach((m, i) => bump(`mu:${m}`, i === 0 ? 1 : 0.5))
+    else if (groupsById[s.groupId]) bump(`group:${groupsById[s.groupId].name}`, 1)
+  }
+  const muscles = [...tally].sort((a, b) => b[1] - a[1]).map(([k]) => k)
+
   return {
     start: session.start,
+    muscles,
     durationMs: (session.end ?? Date.now()) - session.start,
     sets: mine.length,
     exercises: order.length,

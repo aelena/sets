@@ -21,6 +21,7 @@ export const cleanExercise = (raw, id = raw.id) => {
     desc: str(raw.desc),
     link: str(raw.link),
     archived: !!raw.archived,
+    ...(Array.isArray(raw.muscles) ? { muscles: raw.muscles.filter(m => typeof m === 'string') } : {}),
   }
 }
 
@@ -96,7 +97,7 @@ export function mergeConfig(current, incoming, mode = 'merge') {
 }
 
 const compact = ({ archived, ...e }) =>
-  Object.fromEntries(Object.entries(e).filter(([k, v]) => v !== null && v !== '' && !(k === 'perSide' && !v)))
+  Object.fromEntries(Object.entries(e).filter(([k, v]) => v !== null && v !== '' && !(k === 'perSide' && !v) && !(k === 'muscles' && !v.length)))
 
 /** Config file for editing on a computer: library first, groups reference exercise ids. */
 export const exportConfig = ({ exercises, groups }) => ({

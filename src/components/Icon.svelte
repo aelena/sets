@@ -1,10 +1,12 @@
 <script>
   import { FLAME } from '../lib/recap.js'
   let { name, size = 22 } = $props()
-  const filled = ['play', 'stop', 'flame']
+  const filled = ['play', 'stop', 'pause', 'flame']
   const paths = {
     play: 'M8 5v14l11-7z',
     stop: 'M7 7h10v10H7z',
+    check: 'M5 12.5l4.5 4.5L19 7.5',
+    pause: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
     rest: 'M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9',
     bubble: 'M4 5h16v11H9l-5 4z',
     plus: 'M12 5v14M5 12h14',

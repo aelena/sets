@@ -1,3 +1,6 @@
+/** Flames stay hidden until this many sessions are completed: early on, every set would be a best. (user, 2026-10-16) */
+export const BESTS_AFTER_SESSIONS = 12
+
 /** The amount a set is measured in: reps, or seconds for timed exercises. */
 const amount = s => s.reps ?? s.seconds ?? 0
 

@@ -4,6 +4,7 @@
   import { repo, activeRest, shownSummary } from './lib/store.js'
   import { settings } from './lib/settings.js'
   import { t, summaryWords } from './lib/i18n.js'
+  import { resumeDrive } from './lib/sessionFiles.js'
   import TabBar from './components/TabBar.svelte'
   import Toast from './components/Toast.svelte'
   import RestTimer from './components/RestTimer.svelte'
@@ -21,10 +22,11 @@
   }
 
   onMount(async () => {
-    await repo.seedIfEmpty()
+    await repo.applyPacks() // built-in groups this phone has not had yet; add-only
     navigator.storage?.persist?.().catch(() => {})
     await closeStale()
     ready = true
+    resumeDrive() // back from Google's sign-in page?
     const onVisible = () => document.visibilityState === 'visible' && closeStale()
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)

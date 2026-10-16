@@ -18,6 +18,10 @@ const defaults = {
   tab: 'train',
   lastBackup: null,
   recapFormat: 'story',
+  recapDetail: 'sparse',
+  driveClientId: import.meta.env?.VITE_GOOGLE_CLIENT_ID ?? '',
+  driveAuto: false,
+  todayOnly: false,
   recapBg: 'ink',
 }
 
@@ -38,4 +42,4 @@ settings.subscribe(s => {
 })
 
 /** Fields that travel with a backup; navigation state stays on the device. */
-export const portable = ({ userName, lang, theme, font }) => ({ userName, lang, theme, font })
+export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto }) => ({ userName, lang, theme, font, driveClientId, driveAuto })

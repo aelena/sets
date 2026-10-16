@@ -1,6 +1,7 @@
 import { normalizeConfig, mergeConfig, exportConfig, cleanExercise, BACKUP_FORMAT } from './config.js'
 import { buildSummary } from './summary.js'
-import { seedConfig } from './seed.js'
+import { PACKS, CATALOG_MUSCLES } from './seed.js'
+import { planPack, missingMuscles } from './packs.js'
 import { dateKey, uid, slugify } from './time.js'
 import { resolve, DEFAULT_ACTIVITIES } from './activity.js'
 
@@ -22,12 +23,27 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   const activeRest = async () => (await db.rests.orderBy('start').reverse().first()) ?? null
 
-  async function seedIfEmpty() {
-    if ((await db.groups.count()) || (await db.exercises.count())) return false
-    const { exercises, groups } = normalizeConfig(seedConfig)
-    await writeLibrary({ exercises, groups })
-    return true
+  /**
+   * Add every built-in pack this phone has not had yet, then fill muscles where an exercise has none.
+   * Add-only: whatever the user created, edited or removed stays as it is. Returns the ids applied now.
+   */
+  async function applyPacks(packs = PACKS) {
+    return db.transaction('rw', db.exercises, db.groups, db.meta, async () => {
+      const applied = new Set((await db.meta.get('packs'))?.applied ?? [])
+      const now = []
+      for (const pack of packs.filter(p => !applied.has(p.id))) {
+        const { addExercises, addGroups } = planPack(pack, { exercises: await db.exercises.toArray(), groups: await db.groups.orderBy('order').toArray() })
+        await db.exercises.bulkAdd(addExercises)
+        await db.groups.bulkAdd(addGroups)
+        applied.add(pack.id)
+        now.push(pack.id)
+      }
+      for (const { id, muscles } of missingMuscles(await db.exercises.toArray(), CATALOG_MUSCLES)) await db.exercises.update(id, { muscles })
+      await db.meta.put({ key: 'packs', applied: [...applied] })
+      return now
+    })
   }
+  const seedIfEmpty = async () => (await applyPacks()).includes('base-1')
 
   async function logSet({ exerciseId, groupId = null, reps = null, seconds = null, kg = null }) {
     const ts = clock()
@@ -203,7 +219,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
     const [lib, sets, sessions, notes, activities, activityLogs] = await Promise.all([
       library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray(), db.activities.toArray(), db.activityLogs.toArray(),
     ])
-    return { ...lib, sets, sessions, notes, activities, activityLogs }
+    const packs = (await db.meta.get('packs'))?.applied ?? []
+    return { ...lib, sets, sessions, notes, activities, activityLogs, packs }
   }
 
   async function backup(settings = {}) {
@@ -212,7 +229,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   async function restore(json) {
     if (json?.format !== BACKUP_FORMAT) throw new Error('Not a full backup file')
-    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs]
+    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs, db.meta]
     await db.transaction('rw', tables, async () => {
       await Promise.all(tables.map(t => t.clear()))
       await db.exercises.bulkPut(json.exercises ?? [])
@@ -223,18 +240,44 @@ export const createRepo = (db, clock = () => Date.now()) => {
       // v1 backups predate activities: keep the defaults rather than an empty list
       await db.activities.bulkPut(json.activities ?? DEFAULT_ACTIVITIES)
       await db.activityLogs.bulkPut(json.activityLogs ?? [])
+      // the backup is the user's library as they left it: no built-in pack is re-added on top
+      await db.meta.put({ key: 'packs', applied: json.packs ?? PACKS.map(p => p.id) })
     })
     return json.settings ?? {}
   }
 
   const exportData = everything
 
+  /** One session's raw data, self-contained (names resolved), for Drive or Files. */
+  async function sessionExport(id) {
+    const session = await db.sessions.get(id)
+    if (!session) return null
+    const [sets, activityLogs, notes, exercises, activities, groups] = await Promise.all([
+      db.sets.where('sessionId').equals(id).sortBy('ts'), db.activityLogs.where('sessionId').equals(id).sortBy('ts'),
+      db.notes.where('sessionId').equals(id).sortBy('ts'), db.exercises.toArray(), db.activities.toArray(), db.groups.toArray(),
+    ])
+    const name = (list, key) => Object.fromEntries(list.map(x => [x.id, x.name]))[key] ?? key
+    const iso = ts => new Date(ts).toISOString()
+    return {
+      format: 'sets/session', version: 1, exportedAt: iso(clock()),
+      session: {
+        id: session.id, start: iso(session.start), end: session.end ? iso(session.end) : null,
+        minutes: session.end ? Math.round((session.end - session.start) / 60000) : null,
+        auto: !!session.auto, stats: session.stats ?? null, summary: session.summary,
+      },
+      sets: sets.map(s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
+        group: s.groupId ? name(groups, s.groupId) : null, reps: s.reps, seconds: s.seconds, kg: s.kg })),
+      activities: activityLogs.map(l => ({ time: iso(l.ts), activity: name(activities, l.activityId), minutes: l.minutes, km: l.km, notes: l.notes })),
+      notes: notes.map(n => ({ time: iso(n.ts), text: n.text })),
+    }
+  }
+
   return {
-    db, library, seedIfEmpty, logSet, updateSet, deleteSet, restoreSet,
+    db, library, seedIfEmpty, applyPacks, logSet, updateSet, deleteSet, restoreSet,
     activeSession, startSession, stopSession, autoCloseStale,
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    sessionExport, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

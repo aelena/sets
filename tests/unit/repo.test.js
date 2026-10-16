@@ -20,7 +20,7 @@ beforeEach(async () => {
 describe('repo', () => {
   it('seeds once', async () => {
     expect(await repo.seedIfEmpty()).toBe(false)
-    expect((await repo.library()).groups).toHaveLength(7)
+    expect((await repo.library()).groups).toHaveLength(8)
   })
 
   it('logs ad-hoc sets with a date and no session', async () => {
@@ -155,6 +155,22 @@ describe('upgrade from v1', () => {
   })
 })
 
+describe('session export', () => {
+  it('is self-contained: names resolved, times as ISO', async () => {
+    const s = await repo.startSession()
+    at(T0 + MIN); await repo.logSet({ exerciseId: 'halos', groupId: 'kettlebell-supergroup', reps: 10, kg: 16 })
+    await repo.logActivity({ activityId: 'running', minutes: 20, km: 4 })
+    await repo.addNote('good one')
+    at(T0 + 30 * MIN); await repo.stopSession({ ...L, activities: 'activities' })
+    const x = await repo.sessionExport(s.id)
+    expect(x).toMatchObject({ format: 'sets/session', session: { minutes: 30 } })
+    expect(x.sets).toEqual([{ time: new Date(T0 + MIN).toISOString(), exerciseId: 'halos', exercise: 'Halos', group: 'Kettlebell Supergroup', reps: 10, seconds: null, kg: 16 }])
+    expect(x.activities[0]).toMatchObject({ activity: 'Running', minutes: 20, km: 4 })
+    expect(x.notes[0].text).toBe('good one')
+    expect(await repo.sessionExport('nope')).toBeNull()
+  })
+})
+
 describe('upgrade to v3', () => {
   it('appends the classic groups to an existing library without touching the user\'s', async () => {
     const { default: Dexie } = await import('dexie')
@@ -178,8 +194,8 @@ describe('upgrade to v3', () => {
     expect(await db.exercises.get('dips')).toMatchObject({ name: 'Dips', reps: 10, kg: null })
   })
 
-  it('a fresh install seeds all seven groups once', async () => {
+  it('a fresh install seeds every group once', async () => {
     const groups = (await repo.library()).groups
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back'])
   })
 })

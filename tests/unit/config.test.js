@@ -6,8 +6,7 @@ describe('normalizeConfig', () => {
   it('builds the seed library with slug ids in group order', () => {
     const { exercises, groups, warnings } = normalizeConfig(seedConfig)
     expect(warnings).toEqual([])
-    expect(groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'biceps', 'triceps', 'shoulders', 'leg-day', 'core'])
-    expect(groups[5].exerciseIds).toContain('back-squat')
+    expect(groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine'])
     expect(groups[0].exerciseIds).toHaveLength(12)
     expect(groups[0].exerciseIds[0]).toBe('chest-thrusts')
     expect(exercises.find(e => e.id === '3-phase-supercurl')).toMatchObject({ sets: 3, reps: 10, kg: 16, type: 'reps' })
@@ -44,7 +43,7 @@ describe('mergeConfig', () => {
 
   it('merge keeps existing groups and appends new ones', () => {
     const out = mergeConfig(current, incoming, 'merge')
-    expect(out.groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'biceps', 'triceps', 'shoulders', 'leg-day', 'core', 'home'])
+    expect(out.groups.map(g => g.id)).toEqual(['kettlebell-supergroup', 'my-warm-up-routine', 'home'])
     expect(out.exercises.some(e => e.id === 'halos' && !e.archived)).toBe(true)
   })
 

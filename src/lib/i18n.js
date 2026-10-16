@@ -39,6 +39,14 @@ const en = {
   nothingMeasured: 'Enter a duration or a distance.', m_minutes: 'Minutes', m_km: 'Kilometres', m_pace: 'Pace (min/km)',
   ms_minutes: 'Minutes', ms_km: 'km', ms_pace: 'Pace', rename: 'Rename', entries: 'Entries', calendar: 'Calendar', sessionsLower: 'sessions',
   confirmDeleteActivity: 'Remove this activity? If it has history it is archived and the history stays.',
+  muscles: 'Muscles', mu_chest: 'Chest', mu_back: 'Back', mu_shoulders: 'Shoulders', mu_biceps: 'Biceps', mu_triceps: 'Triceps',
+  mu_forearms: 'Forearms', mu_core: 'Core', mu_glutes: 'Glutes', mu_quads: 'Quads', mu_hamstrings: 'Hamstrings', mu_calves: 'Calves', mu_fullBody: 'Full body',
+  detail: 'Detail', sparse: 'Sparse', full: 'Full',
+  exportSession: 'Export session data', uploadDrive: 'Upload to Google Drive', driveUploaded: 'Saved to Google Drive: {name}',
+  driveFailed: 'Google Drive upload failed: {error}', driveConnect: 'Connect Google Drive', driveDisconnect: 'Disconnect',
+  driveConnected: 'Connected', driveNotConfigured: 'Needs a Google OAuth client ID (see README).', driveClientId: 'Google OAuth client ID',
+  driveAuto: 'Upload each session when it stops', drive: 'Google Drive', driveWaiting: 'Connecting to Google…',
+  todayOnly: 'Only what I did today', todayOnlyOn: 'Today: everything logged so far, all groups', nothingToday: 'Nothing logged today yet. Tap ✓ to go back to the groups.',
 }
 
 const es = {
@@ -79,6 +87,14 @@ const es = {
   nothingMeasured: 'Indica una duración o una distancia.', m_minutes: 'Minutos', m_km: 'Kilómetros', m_pace: 'Ritmo (min/km)',
   ms_minutes: 'Minutos', ms_km: 'km', ms_pace: 'Ritmo', rename: 'Renombrar', entries: 'Entradas', calendar: 'Calendario', sessionsLower: 'sesiones',
   confirmDeleteActivity: '¿Quitar esta actividad? Si tiene historial se archiva y el historial se conserva.',
+  muscles: 'Músculos', mu_chest: 'Pecho', mu_back: 'Espalda', mu_shoulders: 'Hombros', mu_biceps: 'Bíceps', mu_triceps: 'Tríceps',
+  mu_forearms: 'Antebrazos', mu_core: 'Core', mu_glutes: 'Glúteos', mu_quads: 'Cuádriceps', mu_hamstrings: 'Isquiotibiales', mu_calves: 'Gemelos', mu_fullBody: 'Cuerpo entero',
+  detail: 'Detalle', sparse: 'Resumido', full: 'Completo',
+  exportSession: 'Exportar datos de la sesión', uploadDrive: 'Subir a Google Drive', driveUploaded: 'Guardado en Google Drive: {name}',
+  driveFailed: 'Error al subir a Google Drive: {error}', driveConnect: 'Conectar Google Drive', driveDisconnect: 'Desconectar',
+  driveConnected: 'Conectado', driveNotConfigured: 'Necesita un ID de cliente OAuth de Google (ver README).', driveClientId: 'ID de cliente OAuth de Google',
+  driveAuto: 'Subir cada sesión al terminarla', drive: 'Google Drive', driveWaiting: 'Conectando con Google…',
+  todayOnly: 'Solo lo de hoy', todayOnlyOn: 'Hoy: todo lo anotado hasta ahora, de todos los grupos', nothingToday: 'Aún no hay nada anotado hoy. Pulsa ✓ para volver a los grupos.',
 }
 
 export const dictionaries = { en, es }

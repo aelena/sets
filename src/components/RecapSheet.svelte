@@ -5,6 +5,7 @@
   import { settings, FONTS } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { recapData, GRADIENTS } from '../lib/recap.js'
+  import { BESTS_AFTER_SESSIONS } from '../lib/history.js'
   import { drawRecap, toJpeg, loadImage, PHOTOS } from '../lib/recapImage.js'
   import { deliver } from '../lib/export.js'
   import { dateKey } from '../lib/time.js'
@@ -22,12 +23,14 @@
     if ($settings.recapBg === 'picked') $settings.recapBg = 'ink' // a picked photo is not kept between openings
     const sets = await db.sets.where('sessionId').equals(session.id).toArray()
     const ids = [...new Set(sets.map(s => s.exerciseId))]
-    const [history, exercises, activityLogs, activities] = await Promise.all([
+    const [history, exercises, activityLogs, activities, done, groups] = await Promise.all([
       db.sets.where('exerciseId').anyOf(ids).toArray(), db.exercises.bulkGet(ids),
       db.activityLogs.where('sessionId').equals(session.id).toArray(), db.activities.toArray(),
+      db.sessions.filter(s => !!s.end).count(), db.groups.toArray(),
     ])
     data = recapData({
-      session, sets, history, activityLogs,
+      session, sets, history, activityLogs, bestsEnabled: done >= BESTS_AFTER_SESSIONS,
+      groupsById: Object.fromEntries(groups.map(g => [g.id, g])),
       exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
     })
@@ -44,14 +47,15 @@
 
   let run = 0
   $effect(() => {
-    const d = data, format = $settings.recapFormat, choice = bg, lang = $settings.lang, name = $settings.userName
+    const d = data, format = $settings.recapFormat, detail = $settings.recapDetail, choice = bg, lang = $settings.lang, name = $settings.userName
     const family = FONTS[$settings.font] ?? FONTS['JetBrains Mono']
-    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch') }
+    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch'),
+      muscle: k => (k.startsWith('mu:') ? $t(`mu_${k.slice(3)}`) : k.slice(6)) }
     picked // re-render when a new photo is picked
     if (!d) return
     const mine = ++run
     ;(async () => {
-      const canvas = await drawRecap(d, { format, background: await background(choice), family, lang, userName: name, L })
+      const canvas = await drawRecap(d, { format, detail, background: await background(choice), family, lang, userName: name, L })
       const b = await toJpeg(canvas)
       if (mine !== run) return
       if (preview) URL.revokeObjectURL(preview)
@@ -83,6 +87,11 @@
     <div class="segmented">
       <button aria-pressed={$settings.recapFormat === 'story'} onclick={() => ($settings.recapFormat = 'story')}>{$t('story')}</button>
       <button aria-pressed={$settings.recapFormat === 'post'} onclick={() => ($settings.recapFormat = 'post')}>{$t('post')}</button>
+    </div>
+
+    <div class="segmented" role="group" aria-label={$t('detail')}>
+      <button aria-pressed={$settings.recapDetail === 'sparse'} onclick={() => ($settings.recapDetail = 'sparse')}>{$t('sparse')}</button>
+      <button aria-pressed={$settings.recapDetail === 'full'} onclick={() => ($settings.recapDetail = 'full')}>{$t('full')}</button>
     </div>
 
     <div class="preview" class:post={$settings.recapFormat === 'post'}>

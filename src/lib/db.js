@@ -14,6 +14,7 @@ import { normalizeConfig } from './config.js'
  *   notes      { ts, date, sessionId, text }
  *   activities     v2: ad-hoc activity types { id, name, archived } (running, rowing...)
  *   (v3: no schema change; adds the classic sample groups on upgrade)
+ *   meta           v4: { key: 'packs', applied: [pack ids] }
  *   activityLogs   v2: { ts, date, activityId, sessionId, minutes, km, notes }; pace is derived
  */
 export const createDb = (name = 'exercise-tracker') => {
@@ -42,6 +43,12 @@ export const createDb = (name = 'exercise-tracker') => {
     const taken = new Set(groups.map(g => g.id))
     const fresh = incoming.groups.filter(g => !taken.has(g.id))
     await tx.table('groups').bulkAdd(fresh.map((g, i) => ({ ...g, order: groups.length + i })))
+  })
+  // v4: built-in content moves to packs applied once each (see repo.applyPacks). Phones with data
+  // already received the starter and classic groups, so those count as applied.
+  db.version(4).stores({ meta: 'key' }).upgrade(async tx => {
+    const has = (await tx.table('exercises').count()) || (await tx.table('groups').count())
+    if (has) await tx.table('meta').put({ key: 'packs', applied: ['base-1', 'classic-1'] })
   })
   db.on('populate', tx => tx.table('activities').bulkAdd(DEFAULT_ACTIVITIES))
   return db

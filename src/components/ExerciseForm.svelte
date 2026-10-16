@@ -2,13 +2,16 @@
   import { untrack } from 'svelte'
   import { t } from '../lib/i18n.js'
   import { groups } from '../lib/store.js'
+  import { MUSCLES } from '../lib/seed.js'
 
   /** `exercise` null creates a new one. */
   let { exercise = null, onsave, oncancel, ondelete = null } = $props()
   // the form edits a copy; nothing is written until Save
   let f = $state(untrack(() => ({ name: '', type: 'reps', sets: 3, reps: 10, seconds: 30, desc: '', link: '', ...exercise,
-    kg: exercise?.kg ?? '', perSide: !!exercise?.perSide })))
+    kg: exercise?.kg ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])] })))
   const inGroups = $derived(exercise ? ($groups ?? []).filter(g => g.exerciseIds.includes(exercise.id)).map(g => g.name) : [])
+
+  const toggle = m => (f.muscles = f.muscles.includes(m) ? f.muscles.filter(x => x !== m) : [...f.muscles, m])
 
   const submit = e => {
     e.preventDefault()
@@ -33,6 +36,14 @@
     <label class="grow">{$t('weight')}<input type="number" inputmode="decimal" min="0" step="0.5" bind:value={f.kg} placeholder="—" /></label>
   </div>
   <label class="check"><input type="checkbox" bind:checked={f.perSide} /> {$t('perSide')}</label>
+  <div class="stack tight">
+    <span class="muted small">{$t('muscles')}</span>
+    <div class="chips" role="group" aria-label={$t('muscles')}>
+      {#each MUSCLES as m}
+        <button type="button" class="chip" aria-pressed={f.muscles.includes(m)} onclick={() => toggle(m)}>{$t(`mu_${m}`)}</button>
+      {/each}
+    </div>
+  </div>
   <label>{$t('description')}<textarea bind:value={f.desc}></textarea></label>
   <label>{$t('link')}<input type="url" inputmode="url" bind:value={f.link} placeholder="https://youtube.com/…" /></label>
   {#if inGroups.length}<div class="muted small">{$t('inGroups')}: {inGroups.join(', ')}</div>{/if}
@@ -48,4 +59,8 @@
   .check { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 15px; }
   .check input { width: 22px; min-height: 22px; }
   textarea { min-height: 80px; }
+  .tight { gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { min-height: 36px; padding: 0 12px; border-radius: 999px; font-size: 14px; }
+  .chip[aria-pressed='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
 </style>

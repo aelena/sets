@@ -121,6 +121,17 @@ test('shows last time and flames a personal best', async ({ page }) => {
   await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
   await page.getByLabel('reps').fill('12')
   await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(halos.getByTestId('count')).toHaveText('1/5')
+  await expect(halos.getByTitle('Personal best')).toHaveCount(0) // fewer than 12 sessions: no flames yet
+
+  await page.evaluate(async () => {
+    const db = await new Promise(ok => { const r = indexedDB.open('exercise-tracker'); r.onsuccess = () => ok(r.result) })
+    const tx = db.transaction('sessions', 'readwrite')
+    for (let i = 1; i <= 12; i++) tx.objectStore('sessions').put({ id: `old-${i}`, start: Date.UTC(2026, 8, i, 17), end: Date.UTC(2026, 8, i, 18), summary: '' })
+    await new Promise(ok => (tx.oncomplete = ok))
+    db.close()
+  })
+  await page.reload()
   await expect(halos.getByTitle('Personal best')).toBeVisible()
   await halos.getByRole('button', { name: /^Halos/ }).click()
   await expect(page.getByRole('button', { name: '1: 12 @16kg' }).getByLabel('Personal best')).toBeVisible()
@@ -228,4 +239,24 @@ test('classic groups come with a description in the UI language and a form link'
   await page.getByRole('button', { name: /^Dips/ }).click()
   await expect(page.getByText(/^Torso erguido para tríceps/)).toBeVisible()
   await expect(page.getByText(/^Upright torso/)).toHaveCount(0)
+})
+
+test('Today toggle lists what was done today across groups', async ({ page }) => {
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.getByRole('tab', { name: 'Biceps' }).click()
+  await page.getByRole('button', { name: 'Log set: Barbell Curl', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(row(page, 'Barbell Curl').getByTestId('count')).toHaveText('1/3')
+
+  await page.getByRole('button', { name: 'Only what I did today' }).click()
+  await expect(page.getByTestId('today-bar')).toBeVisible()
+  await expect(page.getByRole('tab')).toHaveCount(0)
+  await expect(page.locator('.title')).toHaveText(['Halos', 'Barbell Curl'])
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(row(page, 'Halos').getByTestId('count')).toHaveText('2/5')
+
+  await page.getByRole('button', { name: 'Only what I did today' }).click()
+  await expect(page.getByRole('tab', { name: 'Biceps' })).toBeVisible()
 })

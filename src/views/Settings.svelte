@@ -6,8 +6,10 @@
   import { dateKey } from '../lib/time.js'
   import { deliver, jsonBlob, workbook } from '../lib/export.js'
   import { backupNow } from '../lib/backup.js'
+  import * as drive from '../lib/drive.js'
 
   let persisted = $state(null)
+  let driveOn = $state(drive.connected())
   let pending = $state(null) // parsed config waiting for merge / replace
   let error = $state('')
 
@@ -99,6 +101,24 @@
   <label class="file danger">{$t('restore')}<input type="file" accept="application/json,.json" onchange={restore} /></label>
   {#if error}<div class="err" role="alert">{error}</div>{/if}
 
+  <h2>{$t('drive')}</h2>
+  <label>{$t('driveClientId')}
+    <input bind:value={$settings.driveClientId} placeholder="1234-abc.apps.googleusercontent.com" autocapitalize="off" autocomplete="off" spellcheck="false" />
+  </label>
+  {#if $settings.driveClientId}
+    <div class="row">
+      <span class="grow small" data-testid="drive-status">{driveOn ? $t('driveConnected') : ''}</span>
+      {#if driveOn}
+        <button onclick={() => { drive.disconnect(); driveOn = false }}>{$t('driveDisconnect')}</button>
+      {:else}
+        <button onclick={() => drive.connect($settings.driveClientId)}>{$t('driveConnect')}</button>
+      {/if}
+    </div>
+    <label class="check"><input type="checkbox" bind:checked={$settings.driveAuto} /> {$t('driveAuto')}</label>
+  {:else}
+    <div class="muted small">{$t('driveNotConfigured')}</div>
+  {/if}
+
   <h2>{$t('storage')}</h2>
   <div class="small">{persisted ? $t('persisted') : $t('notPersisted')}</div>
 
@@ -118,5 +138,7 @@
   .file.danger { color: var(--danger); }
   .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .pad { padding: 12px; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 15px; }
+  .check input { width: 22px; min-height: 22px; }
   .err { color: var(--danger); }
 </style>

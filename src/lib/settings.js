@@ -17,6 +17,8 @@ const defaults = {
   groupId: null,
   tab: 'train',
   lastBackup: null,
+  recapFormat: 'story',
+  recapBg: 'ink',
 }
 
 const read = () => {

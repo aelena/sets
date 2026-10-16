@@ -2,7 +2,6 @@ import { liveQuery } from 'dexie'
 import { readable, writable } from 'svelte/store'
 import { createDb } from './db.js'
 import { createRepo } from './repo.js'
-import { dateKey } from './time.js'
 
 export const db = createDb()
 export const repo = createRepo(db)
@@ -13,9 +12,6 @@ export const groups = liveQuery(() => db.groups.orderBy('order').toArray())
 export const activeSession = liveQuery(() => repo.activeSession())
 export const activeRest = liveQuery(() => repo.activeRest().then(r => (r && !r.end ? r : null)))
 export const setCount = liveQuery(() => db.sets.count())
-
-/** Today's sets. The date is read each time the query re-runs (any change to sets, or app reload). */
-export const todaySets = liveQuery(() => db.sets.where('date').equals(dateKey()).sortBy('ts'))
 
 /** One clock for every running timer on screen. */
 export const now = readable(Date.now(), set => {

@@ -101,5 +101,48 @@ test('Spanish UI keeps exercise names untranslated', async ({ page }) => {
 test('exports the config file', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click()
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Export exercise config/ }).click()])
-  expect(download.suggestedFilename()).toMatch(/^exercise-tracker-config-\d{4}-\d\d-\d\d\.json$/)
+  expect(download.suggestedFilename()).toMatch(/^set-tracker-config-\d{4}-\d\d-\d\d\.json$/)
+})
+
+test('shows last time and flames a personal best', async ({ page }) => {
+  const halos = row(page, 'Halos')
+  await page.clock.setFixedTime(new Date(2026, 9, 14, 18, 0))
+  await page.reload()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(halos.getByTestId('count')).toHaveText('1/5')
+
+  await page.clock.setFixedTime(new Date(2026, 9, 16, 18, 0))
+  await page.reload()
+  await expect(halos.getByTestId('count')).toHaveText('0/5')
+  await expect(halos.getByTestId('last')).toHaveText('last: 1×10 @16kg · Wed')
+  await expect(halos.getByTitle('Personal best')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByLabel('reps').fill('12')
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(halos.getByTitle('Personal best')).toBeVisible()
+  await halos.getByRole('button', { name: /^Halos/ }).click()
+  await expect(page.getByRole('button', { name: '1: 12 @16kg' }).getByLabel('Personal best')).toBeVisible()
+})
+
+test('summary offers a backup and a shareable recap image', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await expect(page.getByText('Last backup: today')).toBeVisible()
+
+  const [backup] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Back up' }).click()])
+  expect(backup.suggestedFilename()).toMatch(/^set-tracker-backup-.*\.json$/)
+
+  await page.getByRole('button', { name: 'Share image' }).click()
+  const img = page.getByTestId('recap-preview')
+  await expect(img).toBeVisible()
+  expect(await img.evaluate(i => [i.naturalWidth, i.naturalHeight])).toEqual([1080, 1920])
+  await page.getByRole('button', { name: 'Post 4:5' }).click()
+  await expect.poll(() => img.evaluate(i => i.naturalHeight)).toBe(1350)
+  await page.getByRole('radio', { name: 'ember' }).click()
+  const [shot] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Share', exact: true }).click()])
+  expect(shot.suggestedFilename()).toMatch(/^set-tracker-\d{4}-\d\d-\d\d\.jpg$/)
 })

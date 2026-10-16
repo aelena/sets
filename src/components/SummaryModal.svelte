@@ -1,9 +1,16 @@
 <script>
   import Sheet from './Sheet.svelte'
-  import { notify } from '../lib/store.js'
+  import RecapSheet from './RecapSheet.svelte'
+  import { notify, now } from '../lib/store.js'
+  import { settings } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
+  import { backupNow, daysSince } from '../lib/backup.js'
 
   let { session, onclose } = $props()
+  let recap = $state(false)
+  const days = $derived(daysSince($settings.lastBackup, $now))
+  const backupText = $derived(days == null ? $t('never') : days === 0 ? $t('todayLower') : $t('daysAgo', { d: days }))
+
   const copy = async () => {
     try { await navigator.clipboard.writeText(session.summary); notify($t('copied')) } catch {}
   }
@@ -11,13 +18,19 @@
 
 <Sheet title={$t('summary')} {onclose}>
   <pre class="summary card" data-testid="summary">{session.summary}</pre>
-  <div class="row actions">
+  <div class="grid">
+    <button class="primary" onclick={() => (recap = true)}>{$t('shareImage')}</button>
+    <button onclick={backupNow}>{$t('backupNow')}</button>
     <button onclick={copy}>{$t('copy')}</button>
-    <button class="primary grow" onclick={onclose}>{$t('close')}</button>
+    <button onclick={onclose}>{$t('close')}</button>
   </div>
+  <div class="muted small backup" class:warn={days == null || days >= 7}>{$t('lastBackup')}: {backupText}</div>
 </Sheet>
+{#if recap}<RecapSheet {session} onclose={() => (recap = false)} />{/if}
 
 <style>
   pre { padding: 12px; }
-  .actions { margin-top: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .backup { margin-top: 8px; text-align: center; }
+  .warn { color: var(--danger); }
 </style>

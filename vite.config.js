@@ -22,7 +22,7 @@ export default defineConfig({
         background_color: '#111111',
         theme_color: '#111111',
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,woff2}'], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
     }),
   ],
   test: { include: ['tests/unit/**/*.test.js'], environment: 'node' },

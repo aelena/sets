@@ -56,7 +56,9 @@ export const createRepo = (db, clock = () => Date.now()) => {
       db.rests.where('sessionId').equals(session.id).toArray(),
       db.exercises.toArray(),
     ])
-    const closed = { ...session, end, auto }
+    const done = rests.filter(r => r.end)
+    // rests are dropped below; their count and time survive here for the recap image
+    const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0) } }
     closed.summary = buildSummary({ session: closed, sets, rests, exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])), L })
     await db.transaction('rw', db.sessions, db.rests, async () => {
       await db.sessions.put(closed)

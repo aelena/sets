@@ -1,5 +1,7 @@
 <script>
+  import { FLAME } from '../lib/recap.js'
   let { name, size = 22 } = $props()
+  const filled = ['play', 'stop', 'flame']
   const paths = {
     play: 'M8 5v14l11-7z',
     stop: 'M7 7h10v10H7z',
@@ -17,10 +19,11 @@
     x: 'M6 6l12 12M18 6 6 18',
     minus: 'M5 12h14',
     video: 'M4 6h12v12H4zM16 10l5-3v10l-5-3',
+    flame: FLAME,
   }
 </script>
 
-<svg width={size} height={size} viewBox="0 0 24 24" fill={name === 'play' || name === 'stop' ? 'currentColor' : 'none'}
+<svg width={size} height={size} viewBox="0 0 24 24" fill={filled.includes(name) ? 'currentColor' : 'none'}
   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <path d={paths[name]} />
 </svg>

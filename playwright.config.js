@@ -4,6 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
+  workers: 4, // more parallel WebKit instances than this time out on a laptop
   reporter: 'list',
   use: { baseURL: 'http://localhost:5179', trace: 'retain-on-failure' },
   projects: [

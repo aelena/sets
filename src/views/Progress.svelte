@@ -6,10 +6,12 @@
   import { daily, metricsFor } from '../lib/metrics.js'
   import { dateKey, duration, hhmm } from '../lib/time.js'
   import Chart from '../components/Chart.svelte'
+  import RecapSheet from '../components/RecapSheet.svelte'
 
   let seg = $state('charts')
   let exId = $state(null)
   let metric = $state(null)
+  let recapFor = $state(null)
 
   const sets = liveQuery(() => db.sets.toArray())
   const sessions = liveQuery(() => db.sessions.orderBy('start').reverse().toArray())
@@ -86,6 +88,7 @@
             <details>
               <summary>{$t('session')} {hhmm(s.start)}{s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}</summary>
               {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
+              {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
             </details>
           {/each}
           {#if d.counts.length}<div class="small">{d.counts.join(' · ')}</div>{/if}
@@ -95,6 +98,7 @@
     {/each}
   {/if}
 </main>
+{#if recapFor}<RecapSheet session={recapFor} onclose={() => (recapFor = null)} />{/if}
 
 <style>
   .controls { margin-top: 12px; }
@@ -106,5 +110,6 @@
   .inner { padding: 12px; gap: 8px; }
   summary { cursor: pointer; font-weight: 700; }
   details pre { margin-top: 8px; color: var(--muted); }
+  .share { margin-top: 8px; width: 100%; }
   blockquote { margin: 0; padding-left: 10px; border-left: 3px solid var(--line); white-space: pre-wrap; font-size: 14px; }
 </style>

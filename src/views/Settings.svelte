@@ -1,10 +1,11 @@
 <script>
   import { onMount } from 'svelte'
   import { repo, notify } from '../lib/store.js'
-  import { settings, portable, FONTS } from '../lib/settings.js'
+  import { settings, FONTS } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { dateKey } from '../lib/time.js'
   import { deliver, jsonBlob, workbook } from '../lib/export.js'
+  import { backupNow } from '../lib/backup.js'
 
   let persisted = $state(null)
   let pending = $state(null) // parsed config waiting for merge / replace
@@ -16,13 +17,9 @@
   const fail = e => (error = e.message ?? String(e))
 
   async function exportXlsx() {
-    await deliver(await workbook(await repo.exportData()), `exercise-tracker-sets-${dateKey()}.xlsx`)
+    await deliver(await workbook(await repo.exportData()), `set-tracker-sets-${dateKey()}.xlsx`)
   }
-  const exportConfig = async () => deliver(jsonBlob(await repo.configFile()), `exercise-tracker-config-${dateKey()}.json`)
-  async function backup() {
-    if (await deliver(jsonBlob(await repo.backup(portable($settings))), `exercise-tracker-backup-${dateKey()}.json`))
-      $settings.lastBackup = Date.now()
-  }
+  const exportConfig = async () => deliver(jsonBlob(await repo.configFile()), `set-tracker-config-${dateKey()}.json`)
 
   async function chooseConfig(e) {
     error = ''
@@ -85,7 +82,7 @@
 
   <h2>{$t('data')}</h2>
   <button onclick={exportXlsx}>{$t('exportXlsx')}</button>
-  <button onclick={backup}>{$t('backup')}</button>
+  <button onclick={backupNow}>{$t('backup')}</button>
   <div class="muted small">{$t('lastBackup')}: {$settings.lastBackup ? new Date($settings.lastBackup).toLocaleString() : $t('never')}</div>
   <button onclick={exportConfig}>{$t('exportConfig')}</button>
   <label class="file">{$t('importConfig')}<input type="file" accept="application/json,.json" onchange={chooseConfig} /></label>

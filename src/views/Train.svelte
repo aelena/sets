@@ -1,10 +1,12 @@
 <script>
   import { get } from 'svelte/store'
-  import { repo, groups, exercises, todaySets, activeSession, setCount, now, shownSummary, notify } from '../lib/store.js'
-  import { settings, portable } from '../lib/settings.js'
+  import { liveQuery } from 'dexie'
+  import { db, repo, groups, exercises, activeSession, setCount, now, shownSummary } from '../lib/store.js'
+  import { lastDay, personalBests } from '../lib/history.js'
+  import { settings } from '../lib/settings.js'
   import { t, summaryWords } from '../lib/i18n.js'
   import { clock, dateKey } from '../lib/time.js'
-  import { deliver, jsonBlob } from '../lib/export.js'
+  import { backupNow, daysSince } from '../lib/backup.js'
   import Icon from '../components/Icon.svelte'
   import ExerciseRow from '../components/ExerciseRow.svelte'
   import LogSheet from '../components/LogSheet.svelte'
@@ -16,8 +18,30 @@
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
   const list = $derived((group?.exerciseIds ?? []).map(id => exById[id]).filter(e => e && !e.archived))
+  // every set ever logged for this group's exercises: today's progress, last time, personal bests
+  let history = $state([])
+  $effect(() => {
+    const ids = group?.exerciseIds ?? []
+    const sub = liveQuery(() => db.sets.where('exerciseId').anyOf(ids).toArray()).subscribe(v => (history = v))
+    return () => sub.unsubscribe()
+  })
+  const todayKey = $derived(dateKey($now))
+  const perExercise = $derived.by(() => {
+    const out = {}
+    for (const ex of list) {
+      const mine = history.filter(s => s.exerciseId === ex.id)
+      out[ex.id] = {
+        today: mine.filter(s => s.date === todayKey).sort((a, b) => a.ts - b.ts),
+        last: lastDay(mine, todayKey),
+        bests: personalBests(mine),
+      }
+    }
+    return out
+  })
+  const empty = { today: [], last: null, bests: new Set() }
+
   const today = $derived(new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format($now))
-  const backupDays = $derived($settings.lastBackup ? Math.floor(($now - $settings.lastBackup) / 864e5) : null)
+  const backupDays = $derived(daysSince($settings.lastBackup, $now))
   const nagBackup = $derived($setCount > 0 && (backupDays == null || backupDays >= 7))
 
   const stop = async () => {
@@ -25,10 +49,6 @@
     if (closed) shownSummary.set(closed)
   }
 
-  const backupNow = async () => {
-    const file = await repo.backup(portable($settings))
-    if (await deliver(jsonBlob(file), `exercise-tracker-backup-${dateKey()}.json`)) $settings.lastBackup = Date.now()
-  }
 </script>
 
 <header>
@@ -69,8 +89,9 @@
   {:else}
     <ul class="list card">
       {#each list as ex (ex.id)}
+        {@const h = perExercise[ex.id] ?? empty}
         <li>
-          <ExerciseRow exercise={ex} sets={($todaySets ?? []).filter(s => s.exerciseId === ex.id)}
+          <ExerciseRow exercise={ex} sets={h.today} last={h.last} bests={h.bests}
             onlog={() => (logging = { exercise: ex })} onedit={set => (logging = { exercise: ex, set })} />
         </li>
       {/each}
@@ -80,7 +101,7 @@
 
 {#if logging}
   <LogSheet exercise={logging.exercise} set={logging.set} groupId={group?.id}
-    done={($todaySets ?? []).filter(s => s.exerciseId === logging.exercise.id)} onclose={() => (logging = null)} />
+    done={(perExercise[logging.exercise.id] ?? empty).today} onclose={() => (logging = null)} />
 {/if}
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
 

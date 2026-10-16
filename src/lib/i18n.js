@@ -30,6 +30,9 @@ const en = {
   imported: 'Imported {g} groups, {e} exercises', restored: 'Backup restored', storage: 'Storage',
   persisted: 'Persistent: iOS will not clear it', notPersisted: 'Not persistent yet: install to the home screen and back up often',
   lastBackup: 'Last backup', never: 'never', about: 'About',
+  last: 'last', best: 'Personal best', bests: 'personal bests', bestOne: 'personal best', daysAgo: '{d} days ago', todayLower: 'today',
+  shareImage: 'Share image', recap: 'Session recap', story: 'Story 9:16', post: 'Post 4:5', background: 'Background',
+  fromPhotos: 'From Photos', share: 'Share', rests: 'rests', moreExercises: '+{n} more',
 }
 
 const es = {
@@ -61,6 +64,9 @@ const es = {
   imported: 'Importados {g} grupos, {e} ejercicios', restored: 'Copia restaurada', storage: 'Almacenamiento',
   persisted: 'Persistente: iOS no lo borrará', notPersisted: 'Aún no es persistente: instala en la pantalla de inicio y haz copias a menudo',
   lastBackup: 'Última copia', never: 'nunca', about: 'Acerca de',
+  last: 'última', best: 'Récord personal', bests: 'récords', bestOne: 'récord', daysAgo: 'hace {d} días', todayLower: 'hoy',
+  shareImage: 'Compartir imagen', recap: 'Resumen en imagen', story: 'Historia 9:16', post: 'Post 4:5', background: 'Fondo',
+  fromPhotos: 'De Fotos', share: 'Compartir', rests: 'descansos', moreExercises: '+{n} más',
 }
 
 export const dictionaries = { en, es }

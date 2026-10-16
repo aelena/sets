@@ -11,9 +11,12 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 - **Exercise groups.** Group exercises however you train ("Kettlebell Supergroup", "My Warm up Routine") and switch between groups at the top of the main screen. Exercises show in the group's order.
 - **One exercise, one history.** An exercise has a name, a target (sets × reps, or sets × seconds for planks, hangs and climbers), an optional weight (leave it empty for bodyweight), an optional "per side" flag, a free-text description and a video link. If an exercise is in two groups, it is still one exercise with one history.
 - **Logging a set takes two taps.** Tap **+**: reps and kg are prefilled from your last set today, or from the target. Confirm, or adjust and confirm. A counter shows `2/5` per exercise; "Undo" is offered right after each set, and any logged set can be edited or deleted.
+- **Last time, at a glance.** Under each exercise: `last: 10 · 10 · 9 @16kg · Wed`, the sets of the most recent earlier day.
+- **Personal bests.** A small flame marks a set that no earlier set matched on both weight and reps (or seconds). Nothing flames on an exercise's first day.
 - **Sessions are optional.** ▶ starts a session and ■ stops it. Sets logged outside a session (between meetings, say) are kept with their date and time. A session left running is closed automatically after two hours without activity, at the time of its last set.
 - **Rest timer.** The hourglass turns the screen into a big stopwatch with a stop button. During a session, rests are counted and summarised when the session stops; outside a session they are not kept.
-- **Session summary.** Stopping a session shows, and stores as plain text: duration, sets, exercises, volume, rest count / total / average / longest, and every exercise's sets.
+- **Session summary.** Stopping a session shows, and stores as plain text: duration, sets, exercises, volume, rest count / total / average / longest, and every exercise's sets. The same sheet has a **Back up** button and says how long ago the last backup was.
+- **Recap image for Instagram.** From the summary, or from any session in History: a 1080×1920 story or 1080×1350 post with the date, duration, sets, volume, personal bests and the exercise list, drawn over a gradient, a bundled photo or one picked from Photos. **Share** opens the iOS share sheet, where Instagram is one of the targets.
 - **Notes.** The speech bubble opens a notes box tied to the running session, or to the day. To dictate, use the microphone on the iPhone keyboard.
 - **Progress.** A chart per exercise (volume, heaviest weight, total reps or seconds, sets per day), with a table of the same numbers, and a day-by-day history of sessions, sets and notes.
 - **Export / import.**
@@ -35,6 +38,10 @@ Everything lives in the browser's IndexedDB on the device: no account, no server
 - At start-up the app asks the browser to keep its storage permanently. Home-screen apps on iOS are spared Safari's 7-day clean-up of website data, but **deleting the app from the home screen deletes its data.**
 - So back up. **Settings → Full backup** opens the iOS share sheet: save the file to iCloud Drive or Files. The main screen reminds you when the last backup is more than 7 days old.
 - **Settings → Restore full backup** replaces everything on the device with a backup file.
+
+## Recap backgrounds
+
+Put portrait photos (about 1080×1920, `.jpg`, `.jpeg`, `.png` or `.webp`, under 1 MB each) in [`src/assets/backgrounds/`](src/assets/backgrounds/) and rebuild. Each file becomes a background choice in the recap sheet and is cached for offline use. The app draws all text itself and darkens the photo towards the bottom, where the numbers sit, so the photos should have no text of their own.
 
 ## The config file
 

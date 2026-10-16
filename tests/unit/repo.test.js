@@ -45,6 +45,7 @@ describe('repo', () => {
     expect(closed.summary).toContain('Halos: 10 @16kg, 8 @16kg')
     expect(await repo.db.rests.count()).toBe(0)
     expect(await repo.activeSession()).toBeNull()
+    expect((await repo.db.sessions.get(s.id)).stats).toEqual({ rests: 1, restMs: 1.5 * MIN })
   })
 
   it('rests outside a session are not kept', async () => {

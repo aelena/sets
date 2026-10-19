@@ -7,6 +7,8 @@
   import { deliver, jsonBlob, workbook } from '../lib/export.js'
   import { backupNow } from '../lib/backup.js'
   import * as drive from '../lib/drive.js'
+  import * as wake from '../lib/wakeLock.js'
+  const wakeHeld = wake.held
 
   let persisted = $state(null)
   let driveOn = $state(drive.connected())
@@ -70,6 +72,16 @@
         <button aria-pressed={$settings.theme === v} onclick={() => ($settings.theme = v)}>{$t(k)}</button>
       {/each}
     </div>
+  </div>
+
+  <div class="stack tight">
+    <span class="muted small">{$t('keepAwake')}</span>
+    <div class="segmented" role="group" aria-label={$t('keepAwake')}>
+      {#each [['session', 'awakeSession'], ['always', 'awakeAlways'], ['off', 'awakeOff']] as [v, k]}
+        <button aria-pressed={($settings.keepAwake ?? 'session') === v} onclick={() => ($settings.keepAwake = v)}>{$t(k)}</button>
+      {/each}
+    </div>
+    <span class="muted small" data-testid="wake-status">{wake.supported ? ($wakeHeld ? $t('awakeOn') : $t('awakeIdle')) : $t('awakeUnsupported')}</span>
   </div>
 
   <div class="stack tight">

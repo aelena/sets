@@ -6,13 +6,8 @@
 
   let { rest } = $props()
 
-  // keep the screen on while the timer is up, where the browser allows it
-  onMount(() => {
-    toast.set(null)
-    let lock
-    navigator.wakeLock?.request('screen').then(l => (lock = l)).catch(() => {})
-    return () => lock?.release().catch(() => {})
-  })
+  // the screen stays on through the App-level wake lock (Settings → Keep the screen on)
+  onMount(() => toast.set(null))
 
   async function stop() {
     const r = await repo.stopRest()

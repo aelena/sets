@@ -22,6 +22,7 @@ const defaults = {
   driveClientId: import.meta.env?.VITE_GOOGLE_CLIENT_ID ?? '',
   driveAuto: false,
   todayOnly: false,
+  keepAwake: 'session', // 'session' (timed session or rest running) | 'always' | 'off'
   recapBg: 'ink',
 }
 
@@ -42,4 +43,4 @@ settings.subscribe(s => {
 })
 
 /** Fields that travel with a backup; navigation state stays on the device. */
-export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto }) => ({ userName, lang, theme, font, driveClientId, driveAuto })
+export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake }) => ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake })

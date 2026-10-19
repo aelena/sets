@@ -5,6 +5,8 @@
   import { settings } from './lib/settings.js'
   import { t, summaryWords } from './lib/i18n.js'
   import { resumeDrive } from './lib/sessionFiles.js'
+  import * as wake from './lib/wakeLock.js'
+  import { activeSession } from './lib/store.js'
   import TabBar from './components/TabBar.svelte'
   import Toast from './components/Toast.svelte'
   import RestTimer from './components/RestTimer.svelte'
@@ -16,6 +18,12 @@
   import Splash from './components/Splash.svelte'
 
   let ready = $state(false)
+
+  // keep the screen on: always, or while a timed session or a rest is running, per Settings
+  $effect(() => {
+    const mode = $settings.keepAwake ?? 'session'
+    wake.want(mode === 'always' || (mode === 'session' && (!!$activeSession || !!$activeRest)))
+  })
 
   const closeStale = async () => {
     const closed = await repo.autoCloseStale(summaryWords(get(t)))

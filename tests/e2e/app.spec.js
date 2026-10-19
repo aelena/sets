@@ -351,3 +351,45 @@ test('loose sets complete into an untimed session for the day, apart from a time
   await expect(page.getByText('Untimed session', { exact: true })).toBeVisible()
   await expect(page.getByText(/^Session 18:00/)).toBeVisible()
 })
+
+test('reordering groups in Edit changes the tabs on Train', async ({ page }) => {
+  await expect(page.getByRole('tab').nth(1)).toHaveText('My Warm up Routine')
+  await page.getByRole('button', { name: 'Edit' }).click()
+  const core = page.locator('.items li', { hasText: 'Core' })
+  for (let i = 0; i < 6; i++) await core.getByRole('button', { name: 'Up', exact: true }).click()
+  await expect(page.locator('.items li').first()).toContainText('Core')
+  await page.getByRole('button', { name: 'Train' }).click()
+  await expect(page.getByRole('tab').first()).toHaveText('Core')
+  await expect(page.getByRole('tab').last()).toHaveText('Cardio & more')
+  await page.reload()
+  await expect(page.getByRole('tab').first()).toHaveText('Core')
+})
+
+test('keeps the screen on during a session, always, or never', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__wake = { requests: 0, releases: 0 }
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: { request: async () => { window.__wake.requests++; return { release: async () => { window.__wake.releases++ }, addEventListener() {} } } },
+    })
+  })
+  await page.reload()
+  const wake = () => page.evaluate(() => window.__wake)
+  expect((await wake()).requests).toBe(0) // default: only in a session
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await expect.poll(async () => (await wake()).requests).toBe(1)
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await expect.poll(async () => (await wake()).releases).toBe(1)
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(page.getByTestId('wake-status')).toHaveText('Not keeping the screen on right now.')
+  await page.getByRole('button', { name: 'Always', exact: true }).click()
+  await expect(page.getByTestId('wake-status')).toHaveText('The screen is being kept on now.')
+  await page.getByRole('button', { name: 'Never', exact: true }).click()
+  await expect(page.getByTestId('wake-status')).toHaveText('Not keeping the screen on right now.')
+  await page.getByRole('button', { name: 'Train' }).click()
+  await page.getByRole('button', { name: 'Rest', exact: true }).click()
+  await page.waitForTimeout(300)
+  expect((await wake()).requests).toBe(2) // "Never" holds even through a rest
+})

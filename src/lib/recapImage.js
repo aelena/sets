@@ -66,7 +66,11 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
   ctx.textBaseline = 'alphabetic'
   let y = story ? 250 : pad + 40 // story: below Instagram's top bar
 
-  const dateText = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(data.start)
+  // untimed: the label on top and the day as the big line, since there is no duration to show
+  const span = new Intl.DateTimeFormat(lang, { weekday: 'short', day: 'numeric', month: 'short' }).format(data.start)
+  const dateText = data.untimed
+    ? L.untimedSession
+    : new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(data.start)
   ctx.fillStyle = white
   ctx.font = font(700, 44)
   ctx.fillText(fit(ctx, dateText, inner), pad, y)
@@ -95,7 +99,8 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
 
   ctx.fillStyle = white
   ctx.font = font(700, durPx)
-  ctx.fillText(bigDuration(data.durationMs), pad - 6, y)
+  ctx.font = font(700, data.untimed ? Math.round(durPx * 0.7) : durPx)
+  ctx.fillText(fit(ctx, data.untimed ? span : bigDuration(data.durationMs), inner + 6), pad - 6, y)
 
   y += 110
   const nf = new Intl.NumberFormat(lang)

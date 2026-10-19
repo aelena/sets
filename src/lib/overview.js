@@ -65,7 +65,7 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
     const r = at(s.start)
     if (!r) continue
     r.sessions++
-    r.minutes += (s.end - s.start) / 60000
+    if (!s.untimed) r.minutes += (s.end - s.start) / 60000
   }
   for (const x of [...sets, ...activityLogs]) at(midnight(x.date))?.days.add(x.date)
   return rows.map(r => ({ start: r.start, sessions: r.sessions, minutes: Math.round(r.minutes), days: r.days.size }))
@@ -73,7 +73,7 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
 
 /** Completed sessions oldest first, with their length in minutes. */
 export const durations = sessions =>
-  sessions.filter(s => s.end).sort((a, b) => a.start - b.start).map(s => ({ x: s.start, y: Math.round((s.end - s.start) / 60000) }))
+  sessions.filter(s => s.end && !s.untimed).sort((a, b) => a.start - b.start).map(s => ({ x: s.start, y: Math.round((s.end - s.start) / 60000) }))
 
 /** Mean of the last `n` weeks that are complete (the current week is still running). */
 export const average = (rows, key, n = 4) => {

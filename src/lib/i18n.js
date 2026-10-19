@@ -48,6 +48,8 @@ const en = {
   driveAuto: 'Upload each session when it stops', drive: 'Google Drive', driveWaiting: 'Connecting to Google…',
   todayOnly: 'Only what I did today', todayOnlyOn: 'Today: everything logged so far, all groups', nothingToday: 'Nothing logged today yet. Tap ✓ to go back to the groups.',
   activitiesTab: 'Cardio & more', nameEs: 'Name in Spanish',
+  untimed: 'untimed', untimedSession: 'Untimed session', complete: 'Complete',
+  looseToday: '{n} logged outside a timed session today', looseDays: '{n} logged outside a timed session, {k} days',
   overview: 'Overview', sinceLast: 'Since you last trained', yesterday: 'yesterday', st_due: 'a week', st_stale: 'stale',
   notYet: 'Not trained yet', sessionsPerWeek: 'Sessions per week', avgPerWeek: 'avg {n} per week (last 4 weeks)',
   trainingDaysAvg: '{n} training days per week', showTable: 'Show as a table', week: 'Week', trainingDays: 'Training days',
@@ -101,6 +103,8 @@ const es = {
   driveAuto: 'Subir cada sesión al terminarla', drive: 'Google Drive', driveWaiting: 'Conectando con Google…',
   todayOnly: 'Solo lo de hoy', todayOnlyOn: 'Hoy: todo lo anotado hasta ahora, de todos los grupos', nothingToday: 'Aún no hay nada anotado hoy. Pulsa ✓ para volver a los grupos.',
   activitiesTab: 'Cardio y más', nameEs: 'Nombre en español',
+  untimed: 'sin cronometrar', untimedSession: 'Sesión sin cronometrar', complete: 'Completar',
+  looseToday: '{n} anotados hoy fuera de una sesión cronometrada', looseDays: '{n} anotados fuera de una sesión cronometrada, {k} días',
   overview: 'Resumen', sinceLast: 'Desde la última vez', yesterday: 'ayer', st_due: 'una semana', st_stale: 'abandonado',
   notYet: 'Aún sin entrenar', sessionsPerWeek: 'Sesiones por semana', avgPerWeek: 'media {n} por semana (últimas 4)',
   trainingDaysAvg: '{n} días de entreno por semana', showTable: 'Ver como tabla', week: 'Semana', trainingDays: 'Días de entreno',
@@ -117,6 +121,6 @@ export const t = derived(settings, $s => {
 
 /** Words baked into a stored session summary. */
 export const summaryWords = tr => ({
-  ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed'].map(k => [k, tr(k)])),
+  ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed', 'untimed'].map(k => [k, tr(k)])),
   lang: get(settings).lang,
 })

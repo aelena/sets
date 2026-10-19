@@ -26,7 +26,9 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
   const vol = volume(sets)
 
   const lines = [
-    `${dateKey(session.start)} ${hhmm(session.start)} → ${hhmm(end)} · ${duration(end - session.start)}${session.auto ? ` (${L.autoClosed})` : ''}`,
+    session.untimed
+      ? `${dateKey(session.start)} · ${L.untimed}`
+      : `${dateKey(session.start)} ${hhmm(session.start)} → ${hhmm(end)} · ${duration(end - session.start)}${session.auto ? ` (${L.autoClosed})` : ''}`,
     [`${sets.length} ${L.sets}`, `${order.length} ${L.exercises}`, activityLogs.length ? `${activityLogs.length} ${L.activities}` : null, vol ? `${Math.round(vol)} kg ${L.volume}` : null].filter(Boolean).join(' · '),
   ]
   if (done.length)

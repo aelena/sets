@@ -199,3 +199,44 @@ describe('upgrade to v3', () => {
     expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back'])
   })
 })
+
+describe('untimed sessions: one per day, apart from timed ones', () => {
+  const W = { ...L, activities: 'activities', untimed: 'untimed' }
+  const DAY = 24 * 60 * MIN
+
+  it('files loose rows into their own day, extends that day on a later Complete, leaves timed sessions alone', async () => {
+    at(T0 - DAY); const y = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 }) // yesterday, at home
+    at(T0 - 9 * 60 * MIN); const a = await repo.logSet({ exerciseId: 'chest-thrusts', reps: 50, kg: 16 }) // 09:00 this morning (T0 is 18:00)
+    await repo.addNote('between meetings')
+    at(T0); const gym = await repo.startSession() // the gym at 18:00
+    at(T0 + 5 * MIN); const g = await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    at(T0 + 60 * MIN); await repo.stopSession(W)
+
+    expect((await repo.pendingAdHoc()).days).toEqual(['2026-10-15', '2026-10-16'])
+    const [yesterday, today] = await repo.completeAdHoc(W)
+    expect(yesterday).toMatchObject({ untimed: true, start: T0 - DAY })
+    expect(today).toMatchObject({ untimed: true, start: T0 - 9 * 60 * MIN, end: T0 - 9 * 60 * MIN })
+    expect(today.summary.split('\n')[0]).toBe('2026-10-16 · untimed')
+    expect((await repo.db.sets.get(y)).sessionId).toBe(yesterday.id)
+    expect((await repo.db.sets.get(a)).sessionId).toBe(today.id)
+    expect((await repo.db.sets.get(g)).sessionId).toBe(gym.id) // the gym session keeps its own
+    expect((await repo.db.notes.toArray())[0].sessionId).toBe(today.id)
+    expect((await repo.pendingAdHoc()).days).toEqual([])
+
+    // later that evening, more at home: Complete adds to the same day's untimed session
+    at(T0 + 4 * 60 * MIN); const b = await repo.logSet({ exerciseId: 'halos', reps: 9, kg: 16 })
+    const [again] = await repo.completeAdHoc(W)
+    expect(again.id).toBe(today.id)
+    expect(again.end).toBe(T0 + 4 * 60 * MIN)
+    expect(again.summary).toContain('2 sets · 2 exercises')
+    expect((await repo.db.sets.get(b)).sessionId).toBe(today.id)
+    expect(await repo.db.sessions.filter(s => s.untimed).count()).toBe(2)
+    expect(await repo.completeAdHoc(W)).toEqual([])
+  })
+
+  it('exports untimed without minutes', async () => {
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    const [s] = await repo.completeAdHoc(W)
+    expect((await repo.sessionExport(s.id)).session).toMatchObject({ untimed: true, minutes: null })
+  })
+})

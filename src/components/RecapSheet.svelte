@@ -48,7 +48,7 @@
   $effect(() => {
     const d = data, format = $settings.recapFormat, detail = $settings.recapDetail, choice = bg, lang = $settings.lang, name = $settings.userName
     const family = FONTS[$settings.font] ?? FONTS['JetBrains Mono']
-    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch'),
+    const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch'), untimedSession: $t('untimedSession'),
       muscle: k => (k.startsWith('mu:') ? $t(`mu_${k.slice(3)}`) : k.slice(6)) }
     picked // re-render when a new photo is picked
     if (!d) return

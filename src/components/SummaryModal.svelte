@@ -28,6 +28,7 @@
     <button onclick={onclose}>{$t('close')}</button>
   </div>
   <div class="muted small backup" class:warn={days == null || days >= 7}>{$t('lastBackup')}: {backupText}</div>
+
 </Sheet>
 {#if recap}<RecapSheet {session} onclose={() => (recap = false)} />{/if}
 

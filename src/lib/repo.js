@@ -106,6 +106,50 @@ export const createRepo = (db, clock = () => Date.now()) => {
     return closed
   }
 
+  /** Sets, activities and notes logged outside any session: what "Complete" files into its day's untimed session. */
+  async function pendingAdHoc() {
+    const loose = t => t.filter(r => !r.sessionId).toArray()
+    const [sets, activityLogs, notes] = await Promise.all([loose(db.sets), loose(db.activityLogs), loose(db.notes)])
+    return { sets, activityLogs, notes, days: [...new Set([...sets, ...activityLogs].map(r => r.date))].sort() }
+  }
+
+  /**
+   * Untimed sessions are one per day and live alongside any timed session that day. Each loose
+   * row joins the untimed session of its own day (created when missing, extended when there is
+   * one already), whose summary is then rebuilt from everything in it. Rows are only linked,
+   * never copied or changed otherwise. Returns the sessions touched, oldest day first.
+   */
+  async function completeAdHoc(L) {
+    const { sets, activityLogs, notes, days } = await pendingAdHoc()
+    if (!days.length) return []
+    const [exercises, activities, sessions] = await Promise.all([db.exercises.toArray(), db.activities.toArray(), db.sessions.toArray()])
+    const exercisesById = Object.fromEntries(exercises.map(e => [e.id, e]))
+    const activitiesById = Object.fromEntries(activities.map(a => [a.id, a]))
+    const touched = []
+    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, async () => {
+      for (const day of days) {
+        let session = sessions.find(x => x.untimed && dateKey(x.start) === day)
+        if (!session) {
+          session = { id: uid(), start: null, end: null, auto: false, untimed: true, stats: { rests: 0, restMs: 0 } }
+          await db.sessions.add(session)
+        }
+        const link = (t, rows) => Promise.all(rows.filter(r => r.date === day).map(r => t.update(r.id, { sessionId: session.id })))
+        await link(db.sets, sets)
+        await link(db.activityLogs, activityLogs)
+        await link(db.notes, notes)
+        const [mySets, myLogs] = await Promise.all([
+          db.sets.where('sessionId').equals(session.id).toArray(), db.activityLogs.where('sessionId').equals(session.id).toArray(),
+        ])
+        const ts = [...mySets, ...myLogs].map(r => r.ts)
+        const updated = { ...session, start: Math.min(...ts), end: Math.max(...ts) }
+        updated.summary = buildSummary({ session: updated, sets: mySets, rests: [], L, activityLogs: myLogs, exercisesById, activitiesById })
+        await db.sessions.put(updated)
+        touched.push(updated)
+      }
+    })
+    return touched
+  }
+
   /** A session left running is closed at its last activity once it has been idle for two hours. */
   async function autoCloseStale(L, idle = IDLE_CLOSE_MS) {
     const session = await activeSession()
@@ -283,7 +327,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
       format: 'sets/session', version: 1, exportedAt: iso(clock()),
       session: {
         id: session.id, start: iso(session.start), end: session.end ? iso(session.end) : null,
-        minutes: session.end ? Math.round((session.end - session.start) / 60000) : null,
+        minutes: session.end && !session.untimed ? Math.round((session.end - session.start) / 60000) : null, untimed: !!session.untimed,
         auto: !!session.auto, stats: session.stats ?? null, summary: session.summary,
       },
       sets: sets.map(s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
@@ -299,6 +343,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    sessionExport, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    sessionExport, pendingAdHoc, completeAdHoc, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

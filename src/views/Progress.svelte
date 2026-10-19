@@ -57,7 +57,7 @@
     })
   })
   const history = $derived(allDays.slice(0, 90))
-  const sessionDays = $derived(new Set(($sessions ?? []).map(s => dateKey(s.start))))
+  const sessionDays = $derived(new Set(($sessions ?? []).filter(s => s.end).map(s => dateKey(s.start))))
   const otherDays = $derived(new Set(allDays.filter(d => d.sets.length || d.logs.length).map(d => d.date)))
   const pickedDay = $derived(allDays.find(d => d.date === picked))
   const longDate = d => new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(midnight(d))
@@ -69,7 +69,7 @@
     <div class="card stack inner">
       {#each d.sessions as s (s.id)}
         <details>
-          <summary>{$t('session')} {hhmm(s.start)}{s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}</summary>
+          <summary>{s.untimed ? $t('untimedSession') : `${$t('session')} ${hhmm(s.start)}${s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}`}</summary>
           {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
           {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
         </details>

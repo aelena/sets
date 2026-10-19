@@ -59,6 +59,21 @@
     return out
   })
   const empty = { today: [], last: null, bests: new Set() }
+
+  // anything logged outside a timed session: "Complete" files it into its day's untimed session
+  let loose = $state({ sets: [], activityLogs: [], days: [] })
+  $effect(() => {
+    const sub = liveQuery(() => repo.pendingAdHoc()).subscribe(v => (loose = v))
+    return () => sub.unsubscribe()
+  })
+  const looseCount = $derived(loose.sets.length + loose.activityLogs.length)
+  const looseText = $derived(loose.days.length === 1 && loose.days[0] === todayKey
+    ? $t('looseToday', { n: looseCount })
+    : $t('looseDays', { n: looseCount, k: loose.days.length }))
+  const complete = async () => {
+    const touched = await repo.completeAdHoc(summaryWords(get(t)))
+    if (touched.length) shownSummary.set(touched.at(-1))
+  }
   const todayActivities = $derived(($activities ?? []).filter(a => ($activityLogs ?? []).some(l => l.activityId === a.id && l.date === todayKey)))
 
   const perActivity = $derived.by(() => {
@@ -111,6 +126,12 @@
 </header>
 
 <main class="view">
+  {#if looseCount}
+    <div class="loose card row" data-testid="loose-bar">
+      <span class="grow small">{looseText}</span>
+      <button class="primary" onclick={complete}>{$t('complete')}</button>
+    </div>
+  {/if}
   {#if nagBackup}
     <div class="nag card row">
       <span class="grow small">{backupDays == null ? $t('backupNever') : $t('backupOld', { d: backupDays })}</span>
@@ -195,6 +216,7 @@
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
+  .loose { padding: 6px 6px 6px 12px; margin-bottom: 12px; border-color: var(--accent); }
   .toggle[aria-pressed='true'] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
   .today-bar { max-width: 608px; margin: 10px auto 0; color: var(--ok); font-weight: 700; }
   .activity { padding: 6px 8px 6px 12px; }

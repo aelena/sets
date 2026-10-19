@@ -2,7 +2,7 @@
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
   import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
-  import { lastDay, personalBests } from '../lib/history.js'
+  import { lastBatch, personalBests, isOpen } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords } from '../lib/i18n.js'
   import { clock, dateKey } from '../lib/time.js'
@@ -26,13 +26,17 @@
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
   const todayKey = $derived(dateKey($now))
 
-  // Today mode: every exercise with a set today, any group, in the order first done
-  let todaySets = $state([])
+  // the workout in progress (running timed session, or loose sets not completed yet)
+  const activeId = $derived($activeSession?.id ?? null)
+  let openSets = $state([])
   $effect(() => {
-    const day = todayKey
-    const sub = liveQuery(() => db.sets.where('date').equals(day).sortBy('ts')).subscribe(v => (todaySets = v))
+    const id = activeId
+    const sub = liveQuery(() => (id ? db.sets.where('sessionId').equals(id).sortBy('ts') : db.sets.filter(s => !s.sessionId).sortBy('ts')))
+      .subscribe(v => (openSets = v))
     return () => sub.unsubscribe()
   })
+  // Today mode: everything in the current workout, any group, in the order first done
+  const todaySets = $derived(openSets)
   const todayOnly = $derived(!!$settings.todayOnly)
   const todayIds = $derived([...new Set(todaySets.map(s => s.exerciseId))])
   const ids = $derived(todayOnly ? todayIds : onActivities ? [] : (group?.exerciseIds ?? []))
@@ -51,8 +55,8 @@
     for (const ex of list) {
       const mine = history.filter(s => s.exerciseId === ex.id)
       out[ex.id] = {
-        today: mine.filter(s => s.date === todayKey).sort((a, b) => a.ts - b.ts),
-        last: lastDay(mine, todayKey),
+        today: mine.filter(s => isOpen(s, activeId)).sort((a, b) => a.ts - b.ts),
+        last: lastBatch(mine, activeId),
         bests: personalBests(mine),
       }
     }
@@ -74,13 +78,13 @@
     const touched = await repo.completeAdHoc(summaryWords(get(t)))
     if (touched.length) shownSummary.set(touched.at(-1))
   }
-  const todayActivities = $derived(($activities ?? []).filter(a => ($activityLogs ?? []).some(l => l.activityId === a.id && l.date === todayKey)))
+  const todayActivities = $derived(($activities ?? []).filter(a => ($activityLogs ?? []).some(l => l.activityId === a.id && isOpen(l, activeId))))
 
   const perActivity = $derived.by(() => {
     const out = {}
     for (const a of $activities ?? []) {
       const mine = ($activityLogs ?? []).filter(l => l.activityId === a.id).sort((x, y) => x.ts - y.ts)
-      out[a.id] = { today: mine.filter(l => l.date === todayKey), last: mine.filter(l => l.date < todayKey).at(-1) ?? null }
+      out[a.id] = { today: mine.filter(l => isOpen(l, activeId)), last: mine.filter(l => !isOpen(l, activeId)).at(-1) ?? null }
     }
     return out
   })

@@ -119,8 +119,10 @@ export const createRepo = (db, clock = () => Date.now()) => {
    * one already), whose summary is then rebuilt from everything in it. Rows are only linked,
    * never copied or changed otherwise. Returns the sessions touched, oldest day first.
    */
-  async function completeAdHoc(L) {
-    const { sets, activityLogs, notes, days } = await pendingAdHoc()
+  async function completeAdHoc(L, { before } = {}) {
+    const pending = await pendingAdHoc()
+    const { sets, activityLogs, notes } = pending
+    const days = before ? pending.days.filter(d => d < before) : pending.days
     if (!days.length) return []
     const [exercises, activities, sessions] = await Promise.all([db.exercises.toArray(), db.activities.toArray(), db.sessions.toArray()])
     const exercisesById = Object.fromEntries(exercises.map(e => [e.id, e]))

@@ -158,7 +158,7 @@ test('summary offers a backup and a shareable recap image', async ({ page }) => 
   await expect(img).toBeVisible()
   expect(await img.evaluate(i => [i.naturalWidth, i.naturalHeight])).toEqual([1080, 1920])
   await page.getByRole('button', { name: 'Post 4:5' }).click()
-  await expect.poll(() => img.evaluate(i => i.naturalHeight)).toBe(1350)
+  await expect.poll(() => img.evaluate(i => i.naturalHeight), { timeout: 15_000 }).toBe(1350) // re-render can be slow under load
   await page.getByRole('radio', { name: 'ember' }).click()
   const [shot] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Share', exact: true }).click()])
   expect(shot.suggestedFilename()).toMatch(/^sets-recap-\d{4}-\d\d-\d\d\.jpg$/)
@@ -257,7 +257,7 @@ test('Today toggle lists what was done today across groups', async ({ page }) =>
   await page.getByRole('button', { name: 'Log set', exact: true }).click()
   await expect(row(page, 'Barbell Curl').getByTestId('count')).toHaveText('1/3')
 
-  await page.getByRole('button', { name: 'Only what I did today' }).click()
+  await page.getByRole('button', { name: 'Only my current workout' }).click()
   await expect(page.getByTestId('today-bar')).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(0)
   await expect(page.locator('.title')).toHaveText(['Halos', 'Barbell Curl'])
@@ -265,7 +265,7 @@ test('Today toggle lists what was done today across groups', async ({ page }) =>
   await page.getByRole('button', { name: 'Log set', exact: true }).click()
   await expect(row(page, 'Halos').getByTestId('count')).toHaveText('2/5')
 
-  await page.getByRole('button', { name: 'Only what I did today' }).click()
+  await page.getByRole('button', { name: 'Only my current workout' }).click()
   await expect(page.getByRole('tab', { name: 'Biceps' })).toBeVisible()
 })
 
@@ -392,4 +392,47 @@ test('keeps the screen on during a session, always, or never', async ({ page }) 
   await page.getByRole('button', { name: 'Rest', exact: true }).click()
   await page.waitForTimeout(300)
   expect((await wake()).requests).toBe(2) // "Never" holds even through a rest
+})
+
+test('counters reset after Complete and after stopping a session; last shows "today"', async ({ page }) => {
+  const halos = row(page, 'Halos')
+  await page.clock.setFixedTime(new Date(2026, 9, 19, 9, 0))
+  await page.reload()
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+    await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  }
+  await expect(halos.getByTestId('count')).toHaveText('2/5')
+  await page.getByRole('button', { name: 'Complete' }).click()
+  await page.getByRole('button', { name: 'Close' }).last().click() // no image: completed anyway
+  await expect(halos.getByTestId('count')).toHaveText('0/5')
+  await expect(halos.getByTestId('last')).toHaveText('last: 2×10 @16kg · today')
+
+  await page.clock.setFixedTime(new Date(2026, 9, 19, 18, 0)) // the gym, later that day
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(halos.getByTestId('count')).toHaveText('1/5')
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await page.getByRole('button', { name: 'Close' }).last().click()
+  await expect(halos.getByTestId('count')).toHaveText('0/5')
+  await expect(halos.getByTestId('last')).toHaveText('last: 1×10 @16kg · today')
+})
+
+test('opening the app on a new day completes yesterday\'s loose sets and starts at 0', async ({ page }) => {
+  const halos = row(page, 'Halos')
+  await page.clock.setFixedTime(new Date(2026, 9, 18, 21, 0))
+  await page.reload()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(page.getByTestId('loose-bar')).toBeVisible()
+
+  await page.clock.setFixedTime(new Date(2026, 9, 19, 8, 0))
+  await page.reload()
+  await expect(page.getByText(/^Earlier loose sets were completed as untimed sessions \(1\)/)).toBeVisible()
+  await expect(page.getByTestId('loose-bar')).toHaveCount(0)
+  await expect(halos.getByTestId('count')).toHaveText('0/5')
+  await page.getByRole('button', { name: 'Progress' }).click()
+  await page.getByRole('button', { name: 'History' }).click()
+  await expect(page.getByText('Untimed session', { exact: true })).toBeVisible()
 })

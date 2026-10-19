@@ -77,3 +77,20 @@ describe('recapData muscles', () => {
     expect(r.muscles).toEqual(['mu:back', 'mu:hamstrings', 'group:Kettlebell Supergroup'])
   })
 })
+
+describe('open batch and last finished batch', async () => {
+  const { isOpen, lastBatch } = await import('../../src/lib/history.js')
+  const r = (ts, date, sessionId = null) => ({ id: ts, ts, date, sessionId, reps: 10, kg: 16 })
+
+  it('open = the running session, or loose rows when none runs', () => {
+    expect([isOpen(r(1, 'd', null), null), isOpen(r(1, 'd', 's1'), null), isOpen(r(1, 'd', 's1'), 's1'), isOpen(r(1, 'd', null), 's1')])
+      .toEqual([true, false, true, false])
+  })
+
+  it('last batch: the latest finished session, else the latest day of loose sets', () => {
+    const sets = [r(1, '2026-10-14', 'a'), r(2, '2026-10-14', 'a'), r(3, '2026-10-19', 'u'), r(4, '2026-10-19', null)]
+    expect(lastBatch(sets, null)).toEqual({ date: '2026-10-19', sets: [sets[2]] }) // the loose one is open
+    expect(lastBatch(sets, 'u').sets.map(s => s.id)).toEqual([4]) // with 'u' running, the loose row is finished
+    expect(lastBatch([r(9, 'd', null)], null)).toBeNull()
+  })
+})

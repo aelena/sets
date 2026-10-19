@@ -6,7 +6,8 @@
   import { t, summaryWords } from './lib/i18n.js'
   import { resumeDrive } from './lib/sessionFiles.js'
   import * as wake from './lib/wakeLock.js'
-  import { activeSession } from './lib/store.js'
+  import { activeSession, now, notify } from './lib/store.js'
+  import { dateKey } from './lib/time.js'
   import TabBar from './components/TabBar.svelte'
   import Toast from './components/Toast.svelte'
   import RestTimer from './components/RestTimer.svelte'
@@ -28,7 +29,19 @@
   const closeStale = async () => {
     const closed = await repo.autoCloseStale(summaryWords(get(t)))
     if (closed) shownSummary.set(closed)
+    // a new day: loose sets from earlier days become their day's untimed session, counters start at 0
+    const rolled = await repo.completeAdHoc(summaryWords(get(t)), { before: dateKey() })
+    if (rolled.length) notify(get(t)('rolledOver', { n: rolled.length }), null, 6000)
   }
+
+  // still open at midnight: roll over when the date changes
+  const day = $derived(dateKey($now))
+  let lastDay = null
+  $effect(() => {
+    const d = day
+    if (lastDay && d !== lastDay && ready) closeStale()
+    lastDay = d
+  })
 
   onMount(async () => {
     await repo.applyPacks() // built-in groups this phone has not had yet; add-only

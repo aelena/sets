@@ -57,3 +57,22 @@ export function compact(sets) {
   if (kg !== undefined) return runs(sets.map(unit)) + tail
   return runs(sets.map(s => `${unit(s)}${s.kg != null ? `@${s.kg}` : ''}`))
 }
+
+/**
+ * The workout in progress: with a timed session running, its rows; otherwise the loose rows
+ * (logged outside any session, not completed yet). Counters only count these, so they go back
+ * to zero whenever a session is stopped or an untimed one is completed.
+ */
+export const isOpen = (row, activeSessionId) => (activeSessionId ? row.sessionId === activeSessionId : !row.sessionId)
+
+/**
+ * The most recent finished batch of one exercise's sets: the last session it was done in
+ * (timed or untimed), or the last day of loose sets. Oldest first; null when there is none.
+ */
+export function lastBatch(sets, activeSessionId) {
+  const done = sets.filter(s => !isOpen(s, activeSessionId))
+  if (!done.length) return null
+  const latest = done.reduce((a, b) => (b.ts > a.ts || (b.ts === a.ts && b.id > a.id) ? b : a)) // ties: the later entry
+  const same = latest.sessionId ? s => s.sessionId === latest.sessionId : s => !s.sessionId && s.date === latest.date
+  return { date: latest.date, sets: done.filter(same).sort((a, b) => a.ts - b.ts) }
+}

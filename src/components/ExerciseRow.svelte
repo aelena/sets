@@ -20,6 +20,7 @@
     if (!last) return ''
     const [y, m, d] = last.date.split('-').map(Number)
     const day = new Date(y, m - 1, d)
+    if (day.toDateString() === new Date().toDateString()) return $t('todayLower')
     const recent = Date.now() - day < 6 * 864e5
     return new Intl.DateTimeFormat($settings.lang, recent ? { weekday: 'short' } : { day: 'numeric', month: 'short' }).format(day)
   })

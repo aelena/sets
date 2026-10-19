@@ -240,3 +240,16 @@ describe('untimed sessions: one per day, apart from timed ones', () => {
     expect((await repo.sessionExport(s.id)).session).toMatchObject({ untimed: true, minutes: null })
   })
 })
+
+describe('day roll-over', () => {
+  const W = { ...L, activities: 'activities', untimed: 'untimed' }
+  it('completes only days before the given one', async () => {
+    at(T0 - 24 * 60 * MIN); const y = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0); const t = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    const rolled = await repo.completeAdHoc(W, { before: '2026-10-16' })
+    expect(rolled.map(s => s.summary.split('\n')[0])).toEqual(['2026-10-15 · untimed'])
+    expect((await repo.db.sets.get(y)).sessionId).toBe(rolled[0].id)
+    expect((await repo.db.sets.get(t)).sessionId).toBeNull() // today stays open
+    expect(await repo.completeAdHoc(W, { before: '2026-10-16' })).toEqual([])
+  })
+})

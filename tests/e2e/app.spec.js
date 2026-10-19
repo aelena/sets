@@ -306,7 +306,13 @@ test('Overview: days since each muscle, sessions per week, session length', asyn
   await expect(page.getByTestId('recency')).toContainText('Kettlebell Supergroup')
   await expect(page.getByTestId('recency')).toContainText('today')
   await expect(page.getByTestId('avg-length')).toHaveText('avg 45 min over the last 1')
-  await expect(page.locator('.chart canvas')).toHaveCount(2)
+  // round 2
+  await expect(page.getByTestId('streak')).toContainText('weeks in a row')
+  await expect(page.getByRole('heading', { name: 'Sets per muscle per week' })).toBeVisible()
+  await expect(page.getByRole('img', { name: /^Quads: / })).toBeVisible()
+  await expect(page.getByTestId('avg-volume')).toBeVisible()
+  await expect(page.getByTestId('time-of-day')).toContainText('Evening')
+  await expect(page.locator('.chart canvas')).toHaveCount(4) // sessions/week, length, volume, rest
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(page.viewportSize().width)
 })
 

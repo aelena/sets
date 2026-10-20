@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // base './' keeps the build portable: GitHub Pages under /<repo>/, any static host, or a local preview.
 export default defineConfig({
   base: './',
-  define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.1.0') },
+  define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? JSON.parse(readFileSync('./package.json', 'utf8')).version) },
   plugins: [
     svelte(),
     VitePWA({

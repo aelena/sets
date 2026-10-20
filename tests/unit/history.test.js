@@ -94,3 +94,11 @@ describe('open batch and last finished batch', async () => {
     expect(lastBatch([r(9, 'd', null)], null)).toBeNull()
   })
 })
+
+describe('recap title', () => {
+  it('travels from the session to the recap data', () => {
+    const r = recapData({ session: { start: 0, end: 1, recapTitle: 'Killer day' }, sets: [], exercisesById: {} })
+    expect(r.title).toBe('Killer day')
+    expect(recapData({ session: { start: 0, end: 1 }, sets: [], exercisesById: {} }).title).toBe('')
+  })
+})

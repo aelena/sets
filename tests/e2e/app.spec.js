@@ -389,9 +389,10 @@ test('keeps the screen on during a session, always, or never', async ({ page }) 
   await page.getByRole('button', { name: 'Never', exact: true }).click()
   await expect(page.getByTestId('wake-status')).toHaveText('Not keeping the screen on right now.')
   await page.getByRole('button', { name: 'Train' }).click()
-  await page.getByRole('button', { name: 'Rest', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Rest', exact: true })).toBeDisabled() // no session: no rest
+  await page.getByRole('button', { name: 'Start session' }).click()
   await page.waitForTimeout(300)
-  expect((await wake()).requests).toBe(2) // "Never" holds even through a rest
+  expect((await wake()).requests).toBe(2) // "Never" holds even in a session
 })
 
 test('counters reset after Complete and after stopping a session; last shows "today"', async ({ page }) => {
@@ -512,4 +513,53 @@ test('keeping it separate leaves the run for the Complete bar', async ({ page })
   await expect(page.getByTestId('bundle')).toHaveCount(0)
   await page.getByRole('button', { name: 'Close' }).last().click()
   await expect(page.getByTestId('loose-bar')).toBeVisible()
+})
+
+test('stopwatch: start, lap, stop, reset; digital and analog; keeps running when closed', async ({ page }) => {
+  await page.getByRole('button', { name: 'Stopwatch' }).click()
+  const time = page.getByTestId('stopwatch-time')
+  await expect(time).toHaveText('00:00.00')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await page.waitForTimeout(1200)
+  await page.getByRole('button', { name: 'Lap', exact: true }).click()
+  await expect(page.getByTestId('laps')).toContainText('Lap 1')
+  await page.getByRole('button', { name: 'Analog' }).click()
+  await expect(page.getByRole('img', { name: /^\d\d:\d\d\.\d\d$/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
+  await expect(page.getByRole('button', { name: 'Stopwatch' })).toHaveClass(/ticking/) // still running
+  await page.reload()
+  await page.getByRole('button', { name: 'Stopwatch' }).click()
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  const stopped = await time.textContent()
+  expect(stopped > '00:01.00').toBe(true)
+  await page.waitForTimeout(400)
+  await expect(time).toHaveText(stopped)
+  await page.getByRole('button', { name: 'Reset' }).click()
+  await expect(time).toHaveText('00:00.00')
+  await expect(page.getByTestId('laps')).toHaveCount(0)
+})
+
+test('recap title is drawn and kept with the session; Chest sits before Kegels; version shows', async ({ page }) => {
+  const tabs = page.getByRole('tab')
+  await expect(tabs.nth(-4)).toHaveText('Chest')
+  await expect(tabs.nth(-3)).toHaveText('Kegels · Men')
+
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await page.getByRole('button', { name: 'Share image' }).click()
+  const img = page.getByTestId('recap-preview')
+  await expect(img).toBeVisible()
+  const plain = await img.getAttribute('src')
+  await page.getByTestId('recap-title').fill('Killer day')
+  await expect(img).not.toHaveAttribute('src', plain, { timeout: 15_000 })
+  await page.waitForTimeout(600) // saved after a short pause
+  await page.getByRole('dialog', { name: 'Session recap' }).getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Share image' }).click()
+  await expect(page.getByTestId('recap-title')).toHaveValue('Killer day')
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(page.getByText(/^Sets v0\.9\.0/)).toBeVisible()
 })

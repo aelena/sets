@@ -22,6 +22,7 @@ const defaults = {
   driveClientId: import.meta.env?.VITE_GOOGLE_CLIENT_ID ?? '',
   driveAuto: false,
   todayOnly: false,
+  stopwatchFace: 'digital',
   keepAwake: 'session', // 'session' (timed session or rest running) | 'always' | 'off'
   recapBg: 'ink',
 }

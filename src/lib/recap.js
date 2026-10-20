@@ -32,6 +32,7 @@ export function recapData({ session, sets, history = sets, exercisesById, activi
     start: session.start,
     end: session.end ?? session.start,
     untimed: !!session.untimed,
+    title: session.recapTitle ?? '',
     muscles,
     durationMs: (session.end ?? Date.now()) - session.start,
     sets: mine.length,

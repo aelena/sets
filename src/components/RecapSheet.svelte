@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte'
   import Sheet from './Sheet.svelte'
-  import { db } from '../lib/store.js'
+  import { db, repo } from '../lib/store.js'
   import { settings, FONTS } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { recapData, GRADIENTS } from '../lib/recap.js'
@@ -16,10 +16,22 @@
   let preview = $state('')
   let blob = $state(null)
   let busy = $state(false)
+  let title = $state(session.recapTitle ?? '')
+  let saveTimer
+  // the title is kept with the session, so the recap can be made again with it
+  function retitle(v) {
+    title = v
+    if (data) data = { ...data, title: v.trim() }
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => { saveTimer = null; repo.setRecapTitle(session.id, v) }, 400)
+  }
 
   // load once: this session's sets, plus each exercise's whole history for personal bests
   onMount(async () => {
     if ($settings.recapBg === 'picked') $settings.recapBg = 'ink' // a picked photo is not kept between openings
+    // the session prop may be a snapshot from before a title was saved: read the stored one
+    const stored = await db.sessions.get(session.id)
+    if (stored?.recapTitle && !title) title = stored.recapTitle
     const sets = await db.sets.where('sessionId').equals(session.id).toArray()
     const ids = [...new Set(sets.map(s => s.exerciseId))]
     const [history, exercises, activityLogs, activities, groups] = await Promise.all([
@@ -28,7 +40,7 @@
       db.groups.toArray(),
     ])
     data = recapData({
-      session, sets, history, activityLogs,
+      session: { ...session, recapTitle: title }, sets, history, activityLogs,
       groupsById: Object.fromEntries(groups.map(g => [g.id, g])), lang: $settings.lang,
       exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
@@ -78,7 +90,11 @@
     try { await deliver(blob, `sets-recap-${dateKey(session.start)}.jpg`) } finally { busy = false }
   }
 
-  onDestroy(() => { if (preview) URL.revokeObjectURL(preview); if (picked) URL.revokeObjectURL(picked.url) })
+  onDestroy(() => {
+    if (saveTimer) { clearTimeout(saveTimer); repo.setRecapTitle(session.id, title) } // closed before the pause: save now
+    if (preview) URL.revokeObjectURL(preview)
+    if (picked) URL.revokeObjectURL(picked.url)
+  })
 </script>
 
 <Sheet title={$t('recap')} {onclose}>
@@ -87,6 +103,10 @@
       <button aria-pressed={$settings.recapFormat === 'story'} onclick={() => ($settings.recapFormat = 'story')}>{$t('story')}</button>
       <button aria-pressed={$settings.recapFormat === 'post'} onclick={() => ($settings.recapFormat = 'post')}>{$t('post')}</button>
     </div>
+
+    <label>{$t('recapTitle')}
+      <input value={title} oninput={e => retitle(e.currentTarget.value)} maxlength="60" placeholder={$t('recapTitleHint')} data-testid="recap-title" />
+    </label>
 
     <div class="segmented" role="group" aria-label={$t('detail')}>
       <button aria-pressed={$settings.recapDetail === 'sparse'} onclick={() => ($settings.recapDetail = 'sparse')}>{$t('sparse')}</button>

@@ -13,11 +13,14 @@
   import LogSheet from '../components/LogSheet.svelte'
   import NotesSheet from '../components/NotesSheet.svelte'
   import ActivitySheet from '../components/ActivitySheet.svelte'
+  import Stopwatch from '../components/Stopwatch.svelte'
+  import { watch, running as watchRunning } from '../lib/stopwatch.js'
   import { activityLabel } from '../lib/activity.js'
   import { nameOf } from '../lib/names.js'
 
   let logging = $state(null) // { exercise, set? }
   let notesOpen = $state(false)
+  let watchOpen = $state(false)
   let doing = $state(null) // { activity | null, log?, last? }
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
@@ -112,8 +115,9 @@
   <div class="controls">
     <button class="icon" aria-label={$t('startSession')} disabled={!!$activeSession} onclick={() => repo.startSession()}><Icon name="play" /></button>
     <button class="icon" aria-label={$t('stopSession')} disabled={!$activeSession} onclick={stop}><Icon name="stop" /></button>
-    <button class="icon" aria-label={$t('rest')} onclick={() => repo.startRest()}><Icon name="pause" /></button>
+    <button class="icon" aria-label={$t('rest')} disabled={!$activeSession} onclick={() => repo.startRest()}><Icon name="pause" /></button>
     <button class="icon" aria-label={$t('notes')} onclick={() => (notesOpen = true)}><Icon name="bubble" /></button>
+    <button class="icon" class:ticking={watchRunning($watch)} aria-label={$t('stopwatch')} onclick={() => (watchOpen = true)}><Icon name="stopwatch" /></button>
     <span class="grow"></span>
     <button class="icon toggle" aria-label={$t('todayOnly')} aria-pressed={todayOnly} onclick={() => ($settings.todayOnly = !todayOnly)}><Icon name="check" /></button>
   </div>
@@ -202,6 +206,7 @@
     done={(perExercise[logging.exercise.id] ?? empty).today} onclose={() => (logging = null)} />
 {/if}
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
+{#if watchOpen}<Stopwatch onclose={() => (watchOpen = false)} />{/if}
 {#if doing}<ActivitySheet activity={doing.activity} log={doing.log} last={doing.last} onclose={() => (doing = null)} />{/if}
 
 <style>
@@ -220,6 +225,7 @@
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
+  .ticking { color: var(--flame); border-color: var(--flame); }
   .loose { padding: 6px 6px 6px 12px; margin-bottom: 12px; border-color: var(--accent); }
   .toggle[aria-pressed='true'] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
   .today-bar { max-width: 608px; margin: 10px auto 0; color: var(--ok); font-weight: 700; }

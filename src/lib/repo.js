@@ -47,10 +47,12 @@ export const createRepo = (db, clock = () => Date.now()) => {
           const missing = pack.activities.filter(a => !have.some(h => h.id === a.id || h.name.toLowerCase() === a.name.toLowerCase()))
           await db.activities.bulkAdd(missing)
         } else {
-          const { addExercises, addGroups, append } = planPack(pack, { exercises, groups })
+          const plan = planPack(pack, { exercises, groups })
+          const { addExercises, addGroups, append } = plan
           await db.exercises.bulkAdd(addExercises)
           await db.groups.bulkAdd(addGroups)
           if (append) await db.groups.update(append.id, { exerciseIds: append.exerciseIds })
+          for (const { id, order } of plan.shift ?? []) await db.groups.update(id, { order })
         }
         applied.add(pack.id)
         now.push(pack.id)
@@ -156,6 +158,9 @@ export const createRepo = (db, clock = () => Date.now()) => {
     })
     return touched
   }
+
+  /** The title printed on a session's recap image ("Killer day"); empty removes it. */
+  const setRecapTitle = (id, title) => db.sessions.update(id, { recapTitle: String(title ?? '').trim().slice(0, 60) })
 
   /** Loose rows (outside any session) of the same day as a session: what could be bundled into it. */
   async function looseOnDayOf(id) {
@@ -372,7 +377,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
       session: {
         id: session.id, start: iso(session.start), end: session.end ? iso(session.end) : null,
         minutes: session.end && !session.untimed ? Math.round((session.end - session.start) / 60000) : null, untimed: !!session.untimed,
-        auto: !!session.auto, stats: session.stats ?? null, summary: session.summary,
+        auto: !!session.auto, stats: session.stats ?? null, summary: session.summary, title: session.recapTitle ?? '',
       },
       sets: sets.map(s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
         group: s.groupId ? name(groups, s.groupId) : null, reps: s.reps, seconds: s.seconds, kg: s.kg })),
@@ -387,6 +392,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    setRecapTitle, sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

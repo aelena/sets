@@ -38,7 +38,8 @@ Updates arrive on their own: open the app, and if nothing changed, close it and 
 - **Untimed:** anything logged without ▶ (at home between meetings, a run in the morning) stays loose, and a **Complete** bar offers to file it into that **day's untimed session**: one per day, with the same summary, recap image, export and history as a timed one, and the day instead of a duration. Complete again later the same day and it joins the same untimed session.
 - **Bundling:** when you stop a timed session and something was logged outside it that same day (the morning run, a few kettlebell sets), the summary offers **Add to this session** so the day records as one. The session keeps its real start, end and rests; **Keep separate** leaves it for the Complete bar.
 - **A new day starts at 0:** opening the app on a new day, coming back to it, or keeping it open past midnight completes any loose rows from earlier days into their own untimed sessions.
-- **Rest timer:** the pause button turns the screen into a big stopwatch with a stop button. In a session, rests are counted and summarised (count, total, average, longest); outside one they are not kept.
+- **Rest timer:** in a session, the pause button turns the screen into a big timer with a stop button; rests are counted and summarised (count, total, average, longest). Without a session running it is disabled, like ■.
+- **Stopwatch:** the stopwatch button opens a full-screen stopwatch, digital or analog, with start / stop, laps and reset, so you need not leave for the phone's. It keeps running when closed (the button turns orange) or when the app reloads, keeps the screen on while it runs, and records nothing.
 - **Notes:** the speech bubble opens a notes box tied to the session, or to the day. To dictate, use the microphone on the iPhone keyboard.
 - **Screen stays on:** **Settings → Keep the screen on**: in a session (default: while a timed session or a rest runs), always while the app is open, or never. Screen Wake Lock; iPhone home-screen apps need iOS 18.4+. Settings shows whether it is active.
 
@@ -64,7 +65,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 ## Sharing and exporting
 
 - **Session summary:** after ■ or Complete, stored as plain text: time or day, sets, exercises, activities, volume, rests and every exercise's sets.
-- **Recap image for Instagram:** from the summary or any session in History. A 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, muscles trained, personal bests) or **Full** (plus every exercise), over a gradient, a bundled gym photo or one picked from Photos. **Share** opens the iOS share sheet, Instagram included. Every recap prints `aelena.com/sets`.
+- **Recap image for Instagram:** from the summary or any session in History. A 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, muscles trained, personal bests) or **Full** (plus every exercise), over a gradient, a bundled gym photo or one picked from Photos, with an optional title of your own ("Killer day") printed big under the date and kept with the session. **Share** opens the iOS share sheet, Instagram included. Every recap prints `aelena.com/sets`.
 - **Session data:** **Export session data** saves the session's raw JSON through the share sheet (Files, the Google Drive app, AirDrop). With a Google client ID set up, **Upload to Google Drive** puts it straight into a `Sets` folder, and Settings can do it after every session. See [Google Drive](#google-drive).
 - **Excel (.xlsx):** one row per set, plus sheets for activities, sessions and notes. A real workbook, not a CSV, so Excel in Spanish and other European locales opens it correctly.
 - **Exercise config (JSON):** export your groups and exercises, edit them on a computer, import them back (merge or replace). See [The config file](#the-config-file).
@@ -75,7 +76,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 The app ships with groups to start from, each exercise with a short form cue in English and Spanish, its muscles and a link to a YouTube search for good form. Weights are placeholders.
 
 - **Starter:** Kettlebell Supergroup and My Warm up Routine.
-- **Classic:** Biceps, Triceps, Shoulders, Leg Day (with hip thrust and glute bridge), Core, Back.
+- **Classic:** Biceps, Triceps, Shoulders, Chest (bench, incline and decline press, dumbbell press, flyes, cable crossover, pec deck, chest press machine, chest dips), Leg Day (with hip thrust and glute bridge), Core, Back.
 - **Push-up variations** (wide, incline, decline, archer, pike, clap, Hindu, Spiderman), added to a *Functional* group when there is one, as their own group otherwise.
 - **Kegels · Men** and **Kegels · Women**, the last groups: quick squeezes, long holds, elevator, reverse Kegels and bridge with Kegel, cued for each body, with their own history and the *Pelvic floor* muscle.
 
@@ -89,6 +90,10 @@ Built-in content arrives as *packs*, each applied once per phone and only ever a
 - nothing is deleted, renamed or overwritten, and logged sets always keep pointing at their exercise.
 
 One-time curation steps (`curate-1`, `curate-2`) named hand-built exercises properly, guarded by their exact original id and name, so they do nothing on any other phone and never undo a later edit; a never-used built-in duplicate folds into yours. Restoring an older backup applies only the packs added since.
+
+## Versions
+
+The version shows in **Settings → About**. Each release bumps it: the middle number for new features, the last one for fixes; releases are tagged in git (`v0.9.0`).
 
 ## Settings
 

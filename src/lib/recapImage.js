@@ -80,12 +80,19 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
     ctx.font = font(400, 34)
     ctx.fillText(fit(ctx, userName, inner), pad, y)
   }
+  // the user's own title ("Killer day"), big, under the date
+  if (data.title) {
+    y += story ? 110 : 96
+    ctx.fillStyle = white
+    ctx.font = font(700, story ? 84 : 72)
+    ctx.fillText(fit(ctx, data.title, inner), pad, y)
+  }
 
   // the block of numbers sits at the bottom, clear of Instagram's top bar and reply bar,
   // so a photo shows through above it; the exercise list gets whatever room is left
   const durPx = story ? 168 : 136
   const lineH = story ? 66 : 58
-  const topLimit = story ? 360 : 260
+  const topLimit = (story ? 360 : 260) + (data.title ? (story ? 120 : 100) : 0)
   const bottom = H - (story ? 280 : 150)
   // sparse: no exercise list, the muscles trained carry the story
   const lines = detail === 'sparse' ? [] : data.lines

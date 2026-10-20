@@ -39,6 +39,14 @@ export function planPack(pack, { exercises, groups }) {
     takenNames.add(name.toLowerCase())
     return { ...g, id, name, ...(names ? { names } : {}), order: groups.length + i }
   })
+  // `before`: slot the new groups in front of those (e.g. keep Kegels last); later groups move down
+  const anchor = pack.before && groups.filter(g => pack.before.includes(g.id)).map(g => g.order)
+  if (anchor?.length) {
+    const at = Math.min(...anchor)
+    addGroups.forEach((g, i) => (g.order = at + i))
+    const shift = groups.filter(g => g.order >= at).map(g => ({ id: g.id, order: g.order + addGroups.length }))
+    return { addExercises, addGroups, append: null, shift }
+  }
   return { addExercises, addGroups, append: null }
 }
 

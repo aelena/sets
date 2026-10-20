@@ -6,6 +6,7 @@
   import { t, summaryWords } from './lib/i18n.js'
   import { resumeDrive } from './lib/sessionFiles.js'
   import * as wake from './lib/wakeLock.js'
+  import { watch, running as watchRunning } from './lib/stopwatch.js'
   import { activeSession, now, notify } from './lib/store.js'
   import { dateKey } from './lib/time.js'
   import TabBar from './components/TabBar.svelte'
@@ -23,7 +24,7 @@
   // keep the screen on: always, or while a timed session or a rest is running, per Settings
   $effect(() => {
     const mode = $settings.keepAwake ?? 'session'
-    wake.want(mode === 'always' || (mode === 'session' && (!!$activeSession || !!$activeRest)))
+    wake.want(mode === 'always' || (mode === 'session' && (!!$activeSession || !!$activeRest || watchRunning($watch))))
   })
 
   const closeStale = async () => {

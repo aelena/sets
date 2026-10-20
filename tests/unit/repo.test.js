@@ -20,7 +20,7 @@ beforeEach(async () => {
 describe('repo', () => {
   it('seeds once', async () => {
     expect(await repo.seedIfEmpty()).toBe(false)
-    expect((await repo.library()).groups).toHaveLength(11)
+    expect((await repo.library()).groups).toHaveLength(12)
   })
 
   it('logs ad-hoc sets with a date and no session', async () => {
@@ -196,7 +196,7 @@ describe('upgrade to v3', () => {
 
   it('a fresh install seeds every group once', async () => {
     const groups = (await repo.library()).groups
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Chest', 'Kegels · Men', 'Kegels · Women'])
   })
 })
 

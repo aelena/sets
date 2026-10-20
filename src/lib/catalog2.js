@@ -44,6 +44,44 @@ export const PUSHUPS = {
   ],
 }
 
+/** Chest, a classic group placed before the Kegels groups. */
+export const CHEST = {
+  name: 'Chest', names: { es: 'Pecho' },
+  exercises: [
+    ex('Bench Press', 'Press de banca', { sets: 4, reps: 8, kg: 60 }, ['chest', 'triceps', 'shoulders'],
+      'Eyes under the bar, shoulder blades pinched, bar to the lower chest, elbows at about 45°, press up.',
+      'Ojos bajo la barra, escápulas juntas, barra a la parte baja del pecho, codos a unos 45° y empuja.'),
+    ex('Incline Bench Press', 'Press inclinado con barra', { sets: 4, reps: 8, kg: 50 }, ['chest', 'shoulders', 'triceps'],
+      'Bench at 30 to 45°, bar to the upper chest; more upper chest and front shoulder.',
+      'Banco a 30-45°, barra a la parte alta del pecho; más pecho superior y hombro anterior.'),
+    ex('Decline Bench Press', 'Press declinado con barra', { sets: 3, reps: 10, kg: 50 }, ['chest', 'triceps'],
+      'Head lower than the hips, bar to the lower chest; more lower chest.',
+      'Cabeza más baja que la cadera, barra a la parte baja del pecho; más pecho inferior.'),
+    ex('Dumbbell Bench Press', 'Press de banca con mancuernas', { sets: 3, reps: 10, kg: 22 }, ['chest', 'triceps', 'shoulders'],
+      'Dumbbells at chest level, press up and slightly in, lower with a full stretch.',
+      'Mancuernas a la altura del pecho, empuja hacia arriba y un poco hacia dentro, baja con estiramiento completo.'),
+    ex('Incline Dumbbell Press', 'Press inclinado con mancuernas', { sets: 3, reps: 10, kg: 20 }, ['chest', 'shoulders', 'triceps'],
+      'Bench at 30 to 45°, press the dumbbells over the upper chest.',
+      'Banco a 30-45°, empuja las mancuernas sobre la parte alta del pecho.'),
+    ex('Dumbbell Fly', 'Aperturas con mancuernas', { sets: 3, reps: 12, kg: 12 }, ['chest'],
+      'Slight bend in the elbows, open the arms wide until a chest stretch, hug back up.',
+      'Codos algo flexionados, abre los brazos hasta notar el estiramiento del pecho y cierra como un abrazo.'),
+    ex('Cable Crossover', 'Cruce de poleas', { sets: 3, reps: 12, kg: 15 }, ['chest'],
+      'Cables high, step forward, bring the hands together in front of the hips, slow return.',
+      'Poleas altas, un paso adelante, junta las manos delante de la cadera y vuelve despacio.'),
+    ex('Pec Deck', 'Contractora (pec deck)', { sets: 3, reps: 12, kg: 40 }, ['chest'],
+      'Machine fly: elbows slightly bent, bring the handles together, squeeze, open under control.',
+      'Aperturas en máquina: codos algo flexionados, junta los agarres, aprieta y abre controlando.'),
+    ex('Chest Press Machine', 'Press de pecho en máquina', { sets: 3, reps: 10, kg: 50 }, ['chest', 'triceps'],
+      'Handles at mid-chest, press out without locking the elbows, back flat on the pad.',
+      'Agarres a media altura del pecho, empuja sin bloquear los codos, espalda pegada al respaldo.'),
+    ex('Chest Dips', 'Fondos para pecho', { sets: 3, reps: 10 }, ['chest', 'triceps'],
+      'Lean the torso forward and let the elbows flare a little: more chest than the upright dip.',
+      'Inclina el torso hacia delante y abre un poco los codos: más pecho que en los fondos rectos.'),
+    'Push ups',
+  ],
+}
+
 /** Appended to Leg Day. */
 export const HIP_THRUSTS = [
   ex('Barbell Hip Thrust', 'Hip thrust con barra', { sets: 4, reps: 10, kg: 60 }, ['glutes', 'hamstrings'],

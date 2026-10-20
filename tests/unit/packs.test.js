@@ -58,7 +58,7 @@ describe('applyPacks', () => {
     expect(await repo.applyPacks()).toEqual(PACKS.map(p => p.id))
     expect(await repo.applyPacks()).toEqual([])
     const { groups } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Chest', 'Kegels · Men', 'Kegels · Women'])
     expect(groups.find(g => g.id === 'leg-day').exerciseIds.slice(-2)).toEqual(['barbell-hip-thrust', 'glute-bridge']) // appended, no new group
   })
 
@@ -79,9 +79,9 @@ describe('applyPacks', () => {
     old.close()
 
     const repo = createRepo(createDb(name))
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1', 'chest-1']])
     const { groups, exercises } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)', 'Push ups', 'Hip thrust', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)', 'Push ups', 'Hip thrust', 'Chest', 'Kegels · Men', 'Kegels · Women'])
     expect(groups[1].exerciseIds).toEqual(['my-row'])
     expect(exercises.find(e => e.id === 'my-row')).toMatchObject({ kg: 70, muscles: [] })
     expect(groups[2].exerciseIds).toContain('my-row') // their Barbell Row, by name
@@ -92,8 +92,8 @@ describe('applyPacks', () => {
     const repo = createRepo(createDb(`packs-${n++}`))
     const mine = { format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [{ id: 'x', name: 'Only mine', order: 0, exerciseIds: [] }], sets: [], sessions: [], notes: [] }
     await repo.restore(mine)
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
-    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back', 'Push ups', 'Hip thrust', 'Kegels · Men', 'Kegels · Women'])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1', 'chest-1']])
+    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back', 'Push ups', 'Hip thrust', 'Chest', 'Kegels · Men', 'Kegels · Women'])
     await repo.restore({ ...mine, packs: PACKS.map(p => p.id) })
     expect(await repo.applyPacks()).toEqual([])
     expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine'])
@@ -123,7 +123,7 @@ describe('curate-1 on a library like the first hand-built one', () => {
     ])
     const setsBefore = await db.sets.toArray()
 
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1', 'chest-1']])
     const ex = id => db.exercises.get(id)
     expect(await ex('polea-alta-al-pecho')).toMatchObject({ name: 'Lat Pulldown', names: { es: 'Jal\u00f3n al pecho' }, kg: 52, sets: 4 })
     expect((await ex('polea-alta-al-pecho')).desc).toMatch(/^EN: .+\nES: .+\nDe 52 en adelante\.$/)
@@ -167,5 +167,20 @@ describe('curate-2 fill-only', () => {
     expect(Object.keys(by.halos)).toEqual(['link'])
     expect(by['chest-thrusts']).toEqual({ link: 'https://www.youtube.com/results?search_query=kettlebell+Chest+Thrusts' })
     expect(by['torso-twists']).toBeUndefined()
+  })
+})
+
+describe('chest-1 goes before the Kegels groups', () => {
+  it('slots in front of them and moves them down', async () => {
+    const chest = PACKS.find(p => p.id === 'chest-1')
+    const groups = [
+      { id: 'mine', name: 'Mine', order: 0, exerciseIds: [] },
+      { id: 'kegels-men', name: 'Kegels · Men', order: 1, exerciseIds: [] },
+      { id: 'kegels-women', name: 'Kegels · Women', order: 2, exerciseIds: [] },
+    ]
+    const plan = planPack(chest, { exercises: [], groups })
+    expect(plan.addGroups.map(g => [g.name, g.order])).toEqual([['Chest', 1]])
+    expect(plan.shift).toEqual([{ id: 'kegels-men', order: 2 }, { id: 'kegels-women', order: 3 }])
+    expect(planPack(chest, { exercises: [], groups: groups.slice(0, 1) }).shift).toBeUndefined() // no Kegels: appended
   })
 })

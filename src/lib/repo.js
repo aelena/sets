@@ -98,7 +98,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
     ])
     const done = rests.filter(r => r.end)
     // rests are dropped below; their count and time survive here for the recap image
-    const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0) } }
+    const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0), restLongest: Math.max(0, ...done.map(r => r.end - r.start)) } }
     closed.summary = buildSummary({
       session: closed, sets, rests, L, activityLogs,
       exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])),
@@ -155,6 +155,43 @@ export const createRepo = (db, clock = () => Date.now()) => {
       }
     })
     return touched
+  }
+
+  /** Loose rows (outside any session) of the same day as a session: what could be bundled into it. */
+  async function looseOnDayOf(id) {
+    const session = await db.sessions.get(id)
+    if (!session) return { sets: [], activityLogs: [], notes: [] }
+    const day = dateKey(session.start)
+    const { sets, activityLogs, notes } = await pendingAdHoc()
+    const same = r => r.date === day
+    return { sets: sets.filter(same), activityLogs: activityLogs.filter(same), notes: notes.filter(same) }
+  }
+
+  /**
+   * Bundle the day's loose rows into a finished timed session, so the day records as one: the rows
+   * get linked to it and its summary is rebuilt. The session keeps its own start, end and rests.
+   */
+  async function bundleLoose(id, L) {
+    const session = await db.sessions.get(id)
+    if (!session?.end || session.untimed) return null
+    const loose = await looseOnDayOf(id)
+    if (!loose.sets.length && !loose.activityLogs.length && !loose.notes.length) return session
+    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, async () => {
+      for (const [t, rows] of [[db.sets, loose.sets], [db.activityLogs, loose.activityLogs], [db.notes, loose.notes]])
+        await Promise.all(rows.map(r => t.update(r.id, { sessionId: id })))
+    })
+    const [sets, activityLogs, exercises, activities] = await Promise.all([
+      db.sets.where('sessionId').equals(id).toArray(), db.activityLogs.where('sessionId').equals(id).toArray(),
+      db.exercises.toArray(), db.activities.toArray(),
+    ])
+    const updated = { ...session, bundled: (session.bundled ?? 0) + loose.sets.length + loose.activityLogs.length }
+    updated.summary = buildSummary({
+      session: updated, sets, rests: [], L, activityLogs,
+      exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])),
+      activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
+    })
+    await db.sessions.put(updated)
+    return updated
   }
 
   /** A session left running is closed at its last activity once it has been idle for two hours. */
@@ -350,6 +387,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    sessionExport, pendingAdHoc, completeAdHoc, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

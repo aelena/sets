@@ -45,7 +45,7 @@ describe('repo', () => {
     expect(closed.summary).toContain('Halos: 10 @16kg, 8 @16kg')
     expect(await repo.db.rests.count()).toBe(0)
     expect(await repo.activeSession()).toBeNull()
-    expect((await repo.db.sessions.get(s.id)).stats).toEqual({ rests: 1, restMs: 1.5 * MIN })
+    expect((await repo.db.sessions.get(s.id)).stats).toEqual({ rests: 1, restMs: 1.5 * MIN, restLongest: 1.5 * MIN })
   })
 
   it('rests outside a session are not kept', async () => {
@@ -251,5 +251,33 @@ describe('day roll-over', () => {
     expect((await repo.db.sets.get(y)).sessionId).toBe(rolled[0].id)
     expect((await repo.db.sets.get(t)).sessionId).toBeNull() // today stays open
     expect(await repo.completeAdHoc(W, { before: '2026-10-16' })).toEqual([])
+  })
+})
+
+describe("bundling the day's loose rows into a timed session", () => {
+  const W = { ...L, activities: 'activities', untimed: 'untimed' }
+  it("links the same day's loose rows, keeps duration and rests, leaves other days alone", async () => {
+    at(T0 - 24 * 60 * MIN); const yesterday = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 - 9 * 60 * MIN); const run = await repo.logActivity({ activityId: 'running', minutes: 45, km: 8.5 }) // 09:00 run
+    at(T0); const gym = await repo.startSession()
+    at(T0 + 5 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    await repo.startRest(); at(T0 + 7 * MIN); await repo.stopRest()
+    at(T0 + 60 * MIN); const closed = await repo.stopSession(W)
+    expect(closed.summary).toContain('Rest: 1×')
+
+    const loose = await repo.looseOnDayOf(gym.id)
+    expect(loose.activityLogs.map(l => l.id)).toEqual([run])
+    expect(loose.sets).toHaveLength(0) // yesterday's set is another day
+
+    const s = await repo.bundleLoose(gym.id, W)
+    expect((await repo.db.activityLogs.get(run)).sessionId).toBe(gym.id)
+    expect((await repo.db.sets.get(yesterday)).sessionId).toBeNull()
+    expect(s).toMatchObject({ start: T0, end: T0 + 60 * MIN })
+    expect(s.summary.split('\n')[0]).toContain('18:00 → 19:00 · 1h 00m')
+    expect(s.summary).toContain('1 sets · 1 exercises · 1 activities')
+    expect(s.summary).toContain('Rest: 1× · 2m 00s total · avg 2m 00s · longest 2m 00s')
+    expect(s.summary).toContain('Running: 45 min · 8.5 km')
+    expect((await repo.sessionExport(gym.id)).activities).toHaveLength(1)
+    expect(await repo.bundleLoose(gym.id, W)).toMatchObject({ id: gym.id }) // nothing left: unchanged
   })
 })

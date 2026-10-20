@@ -33,6 +33,10 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
   ]
   if (done.length)
     lines.push(`${L.rest}: ${done.length}× · ${duration(total)} ${L.total} · ${L.avg} ${duration(total / done.length)} · ${L.longest} ${duration(Math.max(...restMs))}`)
+  else if (session.stats?.rests) { // rebuilt later (e.g. bundling): the rest rows are gone, their stats are not
+    const { rests: n, restMs: ms, restLongest } = session.stats
+    lines.push(`${L.rest}: ${n}× · ${duration(ms)} ${L.total} · ${L.avg} ${duration(ms / n)}${restLongest ? ` · ${L.longest} ${duration(restLongest)}` : ''}`)
+  }
   for (const id of order) {
     const list = byEx.get(id)
     lines.push(`${nameById(exercisesById, id, L.lang)}: ${list.map(setLabel).join(', ')}`)

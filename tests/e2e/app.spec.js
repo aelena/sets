@@ -277,7 +277,7 @@ test('Spanish UI shows Spanish names; the activities tab sits after the groups',
   await page.getByRole('tab', { name: 'Espalda' }).click()
   await expect(page.locator('.title').first()).toHaveText('Peso muerto')
   await page.getByRole('tab', { name: 'Cardio y más' }).click()
-  await expect(page.locator('.aname')).toHaveText(['Bici estática', 'Remo', 'Correr'])
+  await expect(page.locator('.aname')).toHaveText(['Bici estática', 'Remo', 'Correr', 'Sprints'])
 })
 
 test('Overview: days since each muscle, sessions per week, session length', async ({ page }) => {
@@ -435,4 +435,40 @@ test('opening the app on a new day completes yesterday\'s loose sets and starts 
   await page.getByRole('button', { name: 'Progress' }).click()
   await page.getByRole('button', { name: 'History' }).click()
   await expect(page.getByText('Untimed session', { exact: true })).toBeVisible()
+})
+
+test('Kegels for men and women are the last groups; push-up variations and hip thrust are there', async ({ page }) => {
+  const tabs = page.getByRole('tab')
+  await expect(tabs.nth(-3)).toHaveText('Kegels · Men')
+  await expect(tabs.nth(-2)).toHaveText('Kegels · Women')
+  await expect(tabs.last()).toHaveText('Cardio & more')
+  await page.getByRole('tab', { name: 'Kegels · Women' }).click()
+  await page.getByRole('button', { name: /^Quick Kegels \(women\)/ }).click()
+  await expect(page.getByText(/vagina and anus draw up and in/)).toBeVisible()
+  await page.getByRole('tab', { name: 'Push ups' }).click()
+  await expect(page.locator('.title')).toContainText(['Push ups', 'Diamond Push ups', 'Wide Push ups', 'Archer Push ups'])
+  await page.getByRole('tab', { name: 'Leg Day' }).click()
+  await expect(page.locator('.title').last()).toHaveText('Glute Bridge')
+})
+
+test('sprints log seconds or metres, never prefilled', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Cardio & more' }).click()
+  await page.getByRole('button', { name: 'Log activity: Sprints' }).click()
+  await page.getByLabel('Time (seconds)').fill('30')
+  await expect(page.getByTestId('activity-preview')).toHaveText('30 s')
+  await page.getByRole('button', { name: 'Log activity', exact: true }).click()
+  await expect(page.getByRole('button', { name: '30 s', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Log activity: Sprints' }).click()
+  await expect(page.getByLabel('Time (seconds)')).toHaveValue('') // no defaults
+  await expect(page.getByLabel('Distance (metres)')).toHaveValue('')
+  await page.getByLabel('Distance (metres)').fill('400')
+  await page.getByLabel('Time (seconds)').fill('70')
+  await expect(page.getByTestId('activity-preview')).toHaveText('70 s · 400 m · 2:55/km')
+  await page.getByRole('button', { name: 'Log activity', exact: true }).click()
+  await expect(page.getByRole('button', { name: '70 s · 400 m · 2:55/km' })).toBeVisible()
+
+  // no staleness rules: sprints do not create a cardio row in Overview
+  await page.getByRole('button', { name: 'Progress' }).click()
+  await expect(page.getByTestId('recency')).toHaveCount(0)
 })

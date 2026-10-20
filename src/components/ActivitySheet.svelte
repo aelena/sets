@@ -14,8 +14,12 @@
   let { activity = null, log = null, last = null, onclose } = $props()
 
   const round = (v, d) => String(Math.round(v * 10 ** d) / 10 ** d)
+  // sprints: seconds and metres, either or both, and never prefilled (no defaults)
+  const sprint = untrack(() => activity?.kind === 'sprint' || !!log?.short)
+  let seconds = $state(untrack(() => (log?.short && log.minutes != null ? String(Math.round(log.minutes * 60)) : '')))
+  let meters = $state(untrack(() => (log?.short && log.km != null ? String(Math.round(log.km * 1000)) : '')))
   const init = untrack(() => {
-    const src = log ?? last
+    const src = sprint ? log : log ?? last
     return {
       minutes: src?.minutes != null ? round(src.minutes, 1) : '',
       km: src?.km != null ? round(src.km, 2) : '',
@@ -44,15 +48,22 @@
     if (third === 'pace') pace = formatPace(m / k)
   }
 
+  const num = v => +String(v).replace(',', '.') || null
+  const sprintValues = () => ({ minutes: num(seconds) ? String(num(seconds) / 60) : '', km: num(meters) ? String(num(meters) / 1000) : '' })
   const preview = $derived.by(() => {
-    const m = +String(minutes).replace(',', '.') || null, k = +String(km).replace(',', '.') || null
-    return activityLabel({ minutes: m, km: k })
+    if (sprint) {
+      const v = sprintValues()
+      return activityLabel({ minutes: num(v.minutes), km: num(v.km), short: true })
+    }
+    return activityLabel({ minutes: num(minutes), km: num(km) })
   })
 
   async function submit(e) {
     e.preventDefault()
     error = ''
-    const values = { minutes: String(minutes).replace(',', '.'), km: String(km).replace(',', '.'), pace, notes }
+    const values = sprint
+      ? { ...sprintValues(), pace: '', notes }
+      : { minutes: String(minutes).replace(',', '.'), km: String(km).replace(',', '.'), pace, notes }
     if (log) {
       await repo.updateActivityLog(log.id, values)
       notify($t('saved'))
@@ -60,7 +71,7 @@
     }
     if (!activity && !name.trim()) return
     const target = activity ?? (await repo.ensureActivity(name))
-    const id = await repo.logActivity({ activityId: target.id, ...values })
+    const id = await repo.logActivity({ activityId: target.id, ...values, short: sprint })
     if (id == null) { error = $t('nothingMeasured'); return }
     notify(`${$t('logged')} · ${nameOf(target, $settings.lang)} ${preview}`, { label: $t('undo'), run: () => repo.deleteActivityLog(id) })
     onclose()
@@ -78,18 +89,26 @@
     {#if !activity}
       <label>{$t('activityName')}<input bind:value={name} required placeholder="Swimming, Hike, Yoga…" /></label>
     {/if}
-    <div class="muted small">{$t('fillTwo')}</div>
-    <div class="row">
-      <label class="grow">{$t('duration')}
-        <input inputmode="decimal" bind:value={minutes} oninput={() => edited('minutes')} placeholder="30" />
+    {#if sprint}
+      <div class="muted small">{$t('sprintHint')}</div>
+      <div class="row">
+        <label class="grow">{$t('sprintSeconds')}<input inputmode="decimal" bind:value={seconds} placeholder="30" /></label>
+        <label class="grow">{$t('sprintMeters')}<input inputmode="decimal" bind:value={meters} placeholder="400" /></label>
+      </div>
+    {:else}
+      <div class="muted small">{$t('fillTwo')}</div>
+      <div class="row">
+        <label class="grow">{$t('duration')}
+          <input inputmode="decimal" bind:value={minutes} oninput={() => edited('minutes')} placeholder="30" />
+        </label>
+        <label class="grow">{$t('distance')}
+          <input inputmode="decimal" bind:value={km} oninput={() => edited('km')} placeholder="5" />
+        </label>
+      </div>
+      <label>{$t('pace')}
+        <input inputmode="text" bind:value={pace} oninput={() => edited('pace')} placeholder={$t('paceHint')} autocapitalize="off" autocomplete="off" />
       </label>
-      <label class="grow">{$t('distance')}
-        <input inputmode="decimal" bind:value={km} oninput={() => edited('km')} placeholder="5" />
-      </label>
-    </div>
-    <label>{$t('pace')}
-      <input inputmode="text" bind:value={pace} oninput={() => edited('pace')} placeholder={$t('paceHint')} autocapitalize="off" autocomplete="off" />
-    </label>
+    {/if}
     <label>{$t('activityNotes')}<input bind:value={notes} /></label>
     {#if preview}<div class="preview" data-testid="activity-preview">{preview}</div>{/if}
     {#if error}<div class="err" role="alert">{error}</div>{/if}

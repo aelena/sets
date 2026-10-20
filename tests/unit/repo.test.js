@@ -20,7 +20,7 @@ beforeEach(async () => {
 describe('repo', () => {
   it('seeds once', async () => {
     expect(await repo.seedIfEmpty()).toBe(false)
-    expect((await repo.library()).groups).toHaveLength(8)
+    expect((await repo.library()).groups).toHaveLength(11)
   })
 
   it('logs ad-hoc sets with a date and no session', async () => {
@@ -103,7 +103,7 @@ describe('repo', () => {
 
 describe('activities', () => {
   it('seeds the defaults on a fresh database', async () => {
-    expect((await repo.db.activities.toArray()).map(a => a.name)).toEqual(['Gym Bike', 'Rowing', 'Running'])
+    expect((await repo.db.activities.toArray()).map(a => a.name)).toEqual(['Gym Bike', 'Rowing', 'Running', 'Sprints'])
   })
 
   it('logs running from duration and pace, lands in the session summary and the backup', async () => {
@@ -190,13 +190,13 @@ describe('upgrade to v3', () => {
     expect(groups.map(g => g.name)).toEqual(['Mine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core'])
     expect(groups[0].exerciseIds).toEqual(['halos', 'plank'])
     expect((await db.exercises.get('plank')).seconds).toBe(90)
-    expect(groups.at(-1).exerciseIds[0]).toBe('plank')
+    expect(groups.find(g => g.name === 'Core').exerciseIds[0]).toBe('plank')
     expect(await db.exercises.get('dips')).toMatchObject({ name: 'Dips', reps: 10, kg: null })
   })
 
   it('a fresh install seeds every group once', async () => {
     const groups = (await repo.library()).groups
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Kegels · Men', 'Kegels · Women'])
   })
 })
 

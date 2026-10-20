@@ -1,4 +1,5 @@
 import { ES_EXERCISES, ES_GROUPS, CURATE_1 } from './catalog.js'
+import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2 } from './catalog2.js'
 
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
@@ -10,7 +11,7 @@ const both = (en, es) => `EN: ${en}\nES: ${es}`
 const ex = (name, target, muscles, en, es) => ({ name, ...target, muscles, desc: both(en, es), link: yt(name) })
 
 /** Muscle groups an exercise can be tagged with; labels live in i18n as mu_<key>. */
-export const MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'forearms', 'core', 'glutes', 'quads', 'hamstrings', 'calves', 'fullBody']
+export const MUSCLES = ['chest', 'back', 'shoulders', 'biceps', 'triceps', 'forearms', 'core', 'glutes', 'quads', 'hamstrings', 'calves', 'pelvicFloor', 'fullBody']
 
 /**
  * Classic body-part groups, added in v3. Starting weights are placeholders to edit.
@@ -234,6 +235,12 @@ export const PACKS = [
   { id: 'classic-1', label: 'classic', groups: CLASSIC_GROUPS.map(withEs) },
   CURATE_1, // before back-1, so the Back pack finds the user's renamed exercises by name
   { id: 'back-1', label: 'classic', groups: BACK_GROUPS.map(withEs) },
+  // 2026-10-20: the user's newest exercises named properly, then push-ups, hip thrust, Kegels, Sprints
+  CURATE_2,
+  { id: 'pushups-1', label: 'classic', appendTo: 'nuevo-grupo-2', groups: [PUSHUPS] },
+  { id: 'hipthrust-1', label: 'classic', appendTo: 'leg-day', groups: [{ name: 'Hip thrust', names: { es: 'Hip thrust' }, exercises: HIP_THRUSTS }] },
+  { id: 'kegels-1', label: 'classic', groups: KEGEL_GROUPS }, // last among the groups
+  { id: 'sprints-1', kind: 'activities', activities: [SPRINTS] },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

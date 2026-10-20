@@ -13,6 +13,14 @@ export function planPack(pack, { exercises, groups }) {
   const have = new Set(exercises.map(e => e.id))
   const addExercises = incoming.exercises.filter(e => !have.has(e.id))
 
+  // `appendTo`: the pack's exercises go at the end of that group (missing ones only); without
+  // that group on the phone, the pack's group is added as usual
+  const target = pack.appendTo && groups.find(g => g.id === pack.appendTo)
+  if (target) {
+    const ids = incoming.groups.flatMap(g => g.exerciseIds).filter(id => !target.exerciseIds.includes(id))
+    return { addExercises, addGroups: [], append: { id: target.id, exerciseIds: [...target.exerciseIds, ...new Set(ids)] } }
+  }
+
   const takenIds = new Set(groups.map(g => g.id))
   const takenNames = new Set(groups.map(g => g.name.toLowerCase()))
   const addGroups = incoming.groups.map((g, i) => {
@@ -31,7 +39,7 @@ export function planPack(pack, { exercises, groups }) {
     takenNames.add(name.toLowerCase())
     return { ...g, id, name, ...(names ? { names } : {}), order: groups.length + i }
   })
-  return { addExercises, addGroups }
+  return { addExercises, addGroups, append: null }
 }
 
 /**
@@ -59,9 +67,16 @@ export const missingNames = (items, es) =>
 export function planCuration(pack, { exercises, groups, setCounts = {} }) {
   const exById = new Map(exercises.map(e => [e.id, e]))
   const grById = new Map(groups.map(g => [g.id, g]))
+  // `exercises`: renames under guard; `fill`: only fields the exercise does not have yet
   const exerciseUpdates = (pack.exercises ?? [])
     .filter(u => exById.has(u.id) && norm(exById.get(u.id).name) === norm(u.from))
     .map(u => ({ id: u.id, changes: u.set }))
+  for (const u of pack.fill ?? []) {
+    const e = exById.get(u.id)
+    if (!e || norm(e.name) !== norm(u.from)) continue
+    const changes = Object.fromEntries(Object.entries(u.set).filter(([k]) => !e[k]))
+    if (Object.keys(changes).length) exerciseUpdates.push({ id: u.id, changes })
+  }
   const groupUpdates = (pack.groups ?? [])
     .filter(u => grById.has(u.id) && norm(grById.get(u.id).name) === norm(u.from))
     .map(u => ({ id: u.id, changes: u.set }))

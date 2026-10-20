@@ -55,10 +55,11 @@ describe('missingMuscles', () => {
 describe('applyPacks', () => {
   it('fresh phone: all packs once, nothing on the second start', async () => {
     const repo = createRepo(createDb(`packs-${n++}`))
-    expect(await repo.applyPacks()).toEqual(['base-1', 'classic-1', 'curate-1', 'back-1'])
+    expect(await repo.applyPacks()).toEqual(PACKS.map(p => p.id))
     expect(await repo.applyPacks()).toEqual([])
     const { groups } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.find(g => g.id === 'leg-day').exerciseIds.slice(-2)).toEqual(['barbell-hip-thrust', 'glute-bridge']) // appended, no new group
   })
 
   it('phone with hand-made content from v3: only back-1 is added, nothing of the user\'s changes', async () => {
@@ -78,9 +79,9 @@ describe('applyPacks', () => {
     old.close()
 
     const repo = createRepo(createDb(name))
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
     const { groups, exercises } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)', 'Push ups', 'Hip thrust', 'Kegels · Men', 'Kegels · Women'])
     expect(groups[1].exerciseIds).toEqual(['my-row'])
     expect(exercises.find(e => e.id === 'my-row')).toMatchObject({ kg: 70, muscles: [] })
     expect(groups[2].exerciseIds).toContain('my-row') // their Barbell Row, by name
@@ -91,8 +92,8 @@ describe('applyPacks', () => {
     const repo = createRepo(createDb(`packs-${n++}`))
     const mine = { format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [{ id: 'x', name: 'Only mine', order: 0, exerciseIds: [] }], sets: [], sessions: [], notes: [] }
     await repo.restore(mine)
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
-    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back'])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
+    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back', 'Push ups', 'Hip thrust', 'Kegels · Men', 'Kegels · Women'])
     await repo.restore({ ...mine, packs: PACKS.map(p => p.id) })
     expect(await repo.applyPacks()).toEqual([])
     expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine'])
@@ -122,7 +123,7 @@ describe('curate-1 on a library like the first hand-built one', () => {
     ])
     const setsBefore = await db.sets.toArray()
 
-    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1'])
+    expect(await repo.applyPacks()).toEqual(['curate-1', 'back-1', ...['curate-2', 'pushups-1', 'hipthrust-1', 'kegels-1', 'sprints-1']])
     const ex = id => db.exercises.get(id)
     expect(await ex('polea-alta-al-pecho')).toMatchObject({ name: 'Lat Pulldown', names: { es: 'Jal\u00f3n al pecho' }, kg: 52, sets: 4 })
     expect((await ex('polea-alta-al-pecho')).desc).toMatch(/^EN: .+\nES: .+\nDe 52 en adelante\.$/)
@@ -139,7 +140,7 @@ describe('curate-1 on a library like the first hand-built one', () => {
     expect(groups.find(g => g.id === 'nuevo-grupo')).toMatchObject({ name: 'Back', names: { es: 'Espalda' } })
     expect(groups.find(g => g.id === 'nuevo-grupo-3')).toMatchObject({ name: 'Forearms', names: { es: 'Antebrazos' } })
     // the Back pack arrives as its own group and reuses the user's renamed exercises
-    const classic = groups.at(-1)
+    const classic = groups.find(g => g.name === 'Back (classic)')
     expect(classic).toMatchObject({ name: 'Back (classic)', names: { es: 'Espalda (cl\u00e1sico)' } })
     expect(classic.exerciseIds).toEqual(expect.arrayContaining(['polea-alta-al-pecho', 'remo-sentado', 'dominadas', 'polea-ajustable-hacia-la-cabeza']))
     expect(await db.exercises.where('name').equals('Lat Pulldown').count()).toBe(1)
@@ -147,5 +148,24 @@ describe('curate-1 on a library like the first hand-built one', () => {
     // built-ins got Spanish names, user data untouched
     expect((await ex('barbell-curl')).names).toEqual({ es: 'Curl con barra' })
     expect(await db.sets.toArray()).toEqual(setsBefore)
+  })
+})
+
+describe('curate-2 fill-only', () => {
+  it('writes a description or link only where the exercise has none', async () => {
+    const { planCuration } = await import('../../src/lib/packs.js')
+    const { CURATE_2 } = await import('../../src/lib/catalog2.js')
+    const plan = planCuration(CURATE_2, {
+      exercises: [
+        { id: 'halos', name: 'Halos', desc: 'my own note' },
+        { id: 'chest-thrusts', name: 'Chest Thrusts' },
+        { id: 'torso-twists', name: 'My twists' }, // renamed by the user: left alone
+      ],
+      groups: [],
+    })
+    const by = Object.fromEntries(plan.exerciseUpdates.map(u => [u.id, u.changes]))
+    expect(Object.keys(by.halos)).toEqual(['link'])
+    expect(by['chest-thrusts']).toEqual({ link: 'https://www.youtube.com/results?search_query=kettlebell+Chest+Thrusts' })
+    expect(by['torso-twists']).toBeUndefined()
   })
 })

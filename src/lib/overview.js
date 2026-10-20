@@ -26,7 +26,7 @@ export function recency({ sets, exercisesById, activityLogs = [], today = dateKe
     if (ms?.length) ms.forEach(m => seen(`mu:${m}`, s.date))
     else if (s.groupId) seen(`group:${s.groupId}`, s.date)
   }
-  for (const l of activityLogs) seen('cardio', l.date)
+  for (const l of activityLogs) if (!l.short) seen('cardio', l.date) // sprints: no staleness rules
   const keys = [...new Set([...MUSCLES.map(m => `mu:${m}`), ...last.keys()])]
   return keys
     .map(key => {

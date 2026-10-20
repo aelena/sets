@@ -42,10 +42,15 @@ export const createRepo = (db, clock = () => Date.now()) => {
           for (const { id, changes } of plan.groupUpdates) await db.groups.update(id, changes)
           for (const { id, exerciseIds } of plan.regroup) await db.groups.update(id, { exerciseIds })
           for (const id of plan.archive) await db.exercises.update(id, { archived: true })
+        } else if (pack.kind === 'activities') {
+          const have = await db.activities.toArray()
+          const missing = pack.activities.filter(a => !have.some(h => h.id === a.id || h.name.toLowerCase() === a.name.toLowerCase()))
+          await db.activities.bulkAdd(missing)
         } else {
-          const { addExercises, addGroups } = planPack(pack, { exercises, groups })
+          const { addExercises, addGroups, append } = planPack(pack, { exercises, groups })
           await db.exercises.bulkAdd(addExercises)
           await db.groups.bulkAdd(addGroups)
+          if (append) await db.groups.update(append.id, { exerciseIds: append.exerciseIds })
         }
         applied.add(pack.id)
         now.push(pack.id)
@@ -206,12 +211,12 @@ export const createRepo = (db, clock = () => Date.now()) => {
   }
 
   /** Any two of minutes / km / pace; the third is derived. Returns the new log's id, or null when nothing was measured. */
-  async function logActivity({ activityId, minutes, km, pace, notes = '' }) {
+  async function logActivity({ activityId, minutes, km, pace, notes = '', short = false }) {
     const values = resolve({ minutes, km, pace })
     if (values.minutes == null && values.km == null) return null
     const ts = clock()
     const session = await activeSession()
-    return db.activityLogs.add({ ts, date: dateKey(ts), activityId, sessionId: session?.id ?? null, ...values, notes: notes.trim() })
+    return db.activityLogs.add({ ts, date: dateKey(ts), activityId, sessionId: session?.id ?? null, ...values, notes: notes.trim(), ...(short ? { short: true } : {}) })
   }
   const updateActivityLog = (id, { minutes, km, pace, notes = '' }) => db.activityLogs.update(id, { ...resolve({ minutes, km, pace }), notes: notes.trim() })
   const deleteActivityLog = id => db.activityLogs.delete(id)

@@ -43,6 +43,12 @@ export const paceOf = log => (log.minutes && log.km ? log.minutes / log.km : nul
 /** "30 min · 5 km · 6:00/km", parts left out when unknown. */
 export function activityLabel(log) {
   const pace = paceOf(log)
+  if (log.short) // sprints: seconds and metres read better than 0.5 min and 0.4 km
+    return [
+      log.minutes != null ? `${Math.round(log.minutes * 60)} s` : null,
+      log.km != null ? `${Math.round(log.km * 1000)} m` : null,
+      pace ? `${formatPace(pace)}/km` : null,
+    ].filter(Boolean).join(' · ')
   return [
     log.minutes != null ? `${round(log.minutes, 1)} min` : null,
     log.km != null ? `${round(log.km, 2)} km` : null,

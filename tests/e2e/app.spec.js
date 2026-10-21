@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now() })))
@@ -561,5 +562,6 @@ test('recap title is drawn and kept with the session; Chest sits before Kegels; 
 
   await page.reload()
   await page.getByRole('button', { name: 'Settings' }).click()
-  await expect(page.getByText(/^Sets v0\.9\.0/)).toBeVisible()
+  const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+  await expect(page.getByText(`Sets v${version} · MIT · github.com/aelena`)).toBeVisible()
 })

@@ -76,7 +76,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 The app ships with groups to start from, each exercise with a short form cue in English and Spanish, its muscles and a link to a YouTube search for good form. Weights are placeholders.
 
 - **Starter:** Kettlebell Supergroup and My Warm up Routine.
-- **Classic:** Biceps, Triceps, Shoulders, Chest (bench, incline and decline press, dumbbell press, flyes, cable crossover, pec deck, chest press machine, chest dips), Leg Day (with hip thrust and glute bridge), Core, Back.
+- **Classic:** Biceps, Triceps, Shoulders, Chest (bench, incline and decline press, dumbbell press, flyes, cable crossover, pec deck, seated chest press, chest dips; joined to your own chest group when you have one), Leg Day (with hip thrust and glute bridge), Core, Back.
 - **Push-up variations** (wide, incline, decline, archer, pike, clap, Hindu, Spiderman), added to a *Functional* group when there is one, as their own group otherwise.
 - **Kegels · Men** and **Kegels · Women**, the last groups: quick squeezes, long holds, elevator, reverse Kegels and bridge with Kegel, cued for each body, with their own history and the *Pelvic floor* muscle.
 
@@ -89,7 +89,7 @@ Built-in content arrives as *packs*, each applied once per phone and only ever a
 - descriptions, links, muscles and Spanish names are only filled in where an exercise has none;
 - nothing is deleted, renamed or overwritten, and logged sets always keep pointing at their exercise.
 
-One-time curation steps (`curate-1`, `curate-2`) named hand-built exercises properly, guarded by their exact original id and name, so they do nothing on any other phone and never undo a later edit; a never-used built-in duplicate folds into yours. Restoring an older backup applies only the packs added since.
+One-time curation steps (`curate-1` to `curate-3`) named hand-built exercises properly, guarded by their exact original id and name, so they do nothing on any other phone and never undo a later edit; a never-used built-in duplicate folds into yours. Restoring an older backup applies only the packs added since.
 
 ## Versions
 

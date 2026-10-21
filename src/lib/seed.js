@@ -1,5 +1,6 @@
 import { ES_EXERCISES, ES_GROUPS, CURATE_1 } from './catalog.js'
 import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './catalog2.js'
+import { CURATE_3 } from './catalog3.js'
 
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
@@ -241,8 +242,10 @@ export const PACKS = [
   { id: 'hipthrust-1', label: 'classic', appendTo: 'leg-day', groups: [{ name: 'Hip thrust', names: { es: 'Hip thrust' }, exercises: HIP_THRUSTS }] },
   { id: 'kegels-1', label: 'classic', groups: KEGEL_GROUPS }, // last among the groups
   { id: 'sprints-1', kind: 'activities', activities: [SPRINTS] },
-  // 2026-10-21: chest, kept before the Kegels groups (which stay last)
-  { id: 'chest-1', label: 'classic', before: ['kegels-men', 'kegels-women'], groups: [CHEST] },
+  // 2026-10-21: the user's Pecho and gym additions named first, then chest joins their group
+  // (appended to it), or, on a phone without one, comes as its own group before the Kegels
+  CURATE_3,
+  { id: 'chest-1', label: 'classic', appendTo: 'nuevo-grupo-4', before: ['kegels-men', 'kegels-women'], groups: [CHEST] },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

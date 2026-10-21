@@ -86,7 +86,7 @@ export function planCuration(pack, { exercises, groups, setCounts = {} }) {
     if (Object.keys(changes).length) exerciseUpdates.push({ id: u.id, changes })
   }
   const groupUpdates = (pack.groups ?? [])
-    .filter(u => grById.has(u.id) && norm(grById.get(u.id).name) === norm(u.from))
+    .filter(u => grById.has(u.id) && norm(grById.get(u.id).name) === norm(u.from) && (!u.requires || grById.has(u.requires)))
     .map(u => ({ id: u.id, changes: u.set }))
   const merges = (pack.merges ?? []).filter(m => {
     const from = exById.get(m.from), into = exById.get(m.into)

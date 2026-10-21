@@ -49,7 +49,7 @@ const en = {
   driveAuto: 'Upload each session when it stops', drive: 'Google Drive', driveWaiting: 'Connecting to Google…',
   todayOnly: 'Only my current workout', todayOnlyOn: 'Current workout: everything logged so far, all groups', nothingToday: 'Nothing in the current workout yet. Tap ✓ to go back to the groups.',
   activitiesTab: 'Cardio & more', nameEs: 'Name in Spanish',
-  untimed: 'untimed', untimedSession: 'Untimed session', complete: 'Complete',
+  untimed: 'untimed', untimedSession: 'Untimed session', complete: 'Complete', totalTime: 'total', gymPart: 'gym',
   stopwatch: 'Stopwatch', digital: 'Digital', analog: 'Analog', lap: 'Lap', stop: 'Stop', reset: 'Reset', start: 'Start',
   recapTitle: 'Title (optional)', recapTitleHint: 'Killer day',
   bundleTitle: 'Also logged today, outside this session:', bundleAdd: 'Add to this session', keepSeparate: 'Keep separate',
@@ -118,7 +118,7 @@ const es = {
   driveAuto: 'Subir cada sesión al terminarla', drive: 'Google Drive', driveWaiting: 'Conectando con Google…',
   todayOnly: 'Solo el entreno actual', todayOnlyOn: 'Entreno actual: todo lo anotado hasta ahora, de todos los grupos', nothingToday: 'Aún no hay nada en el entreno actual. Pulsa ✓ para volver a los grupos.',
   activitiesTab: 'Cardio y más', nameEs: 'Nombre en español',
-  untimed: 'sin cronometrar', untimedSession: 'Sesión sin cronometrar', complete: 'Completar',
+  untimed: 'sin cronometrar', untimedSession: 'Sesión sin cronometrar', complete: 'Completar', totalTime: 'total', gymPart: 'gimnasio',
   stopwatch: 'Cronómetro', digital: 'Digital', analog: 'Analógico', lap: 'Vuelta', stop: 'Parar', reset: 'Reiniciar', start: 'Iniciar',
   recapTitle: 'Título (opcional)', recapTitleHint: 'Día bestial',
   bundleTitle: 'También anotado hoy, fuera de esta sesión:', bundleAdd: 'Añadir a esta sesión', keepSeparate: 'Dejar aparte',
@@ -149,6 +149,6 @@ export const t = derived(settings, $s => {
 
 /** Words baked into a stored session summary. */
 export const summaryWords = tr => ({
-  ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed', 'untimed'].map(k => [k, tr(k)])),
+  ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed', 'untimed', 'totalTime'].map(k => [k, tr(k)])),
   lang: get(settings).lang,
 })

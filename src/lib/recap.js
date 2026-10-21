@@ -1,5 +1,5 @@
 import { compact, personalBests } from './history.js'
-import { volume } from './summary.js'
+import { volume, trainingTime } from './summary.js'
 import { activityLabel } from './activity.js'
 import { nameById, nameOf } from './names.js'
 
@@ -34,7 +34,9 @@ export function recapData({ session, sets, history = sets, exercisesById, activi
     untimed: !!session.untimed,
     title: session.recapTitle ?? '',
     muscles,
-    durationMs: (session.end ?? Date.now()) - session.start,
+    durationMs: trainingTime({ ...session, end: session.end ?? Date.now() }, activityLogs).ms ?? (session.end ?? Date.now()) - session.start,
+    // "gym 1h 05m + Running 45 min" when bundled activities add to the session's own time
+    parts: (({ sessionMs, extra }) => (extra.length ? { sessionMs, extra: extra.map(l => ({ name: nameById(activitiesById, l.activityId, lang), minutes: l.minutes })) } : null))(trainingTime({ ...session, end: session.end ?? Date.now() }, activityLogs)),
     sets: mine.length,
     exercises: order.length,
     volume: Math.round(volume(mine)),

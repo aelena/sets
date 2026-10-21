@@ -48,6 +48,7 @@
     await repo.applyPacks() // built-in groups this phone has not had yet; add-only
     navigator.storage?.persist?.().catch(() => {})
     await closeStale()
+    await repo.refreshSummaries(summaryWords(get(t))) // once: totals for sessions with bundled activities
     ready = true
     resumeDrive() // back from Google's sign-in page?
     const onVisible = () => document.visibilityState === 'visible' && closeStale()

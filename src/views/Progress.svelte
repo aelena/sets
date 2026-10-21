@@ -11,6 +11,7 @@
   import Calendar from '../components/Calendar.svelte'
   import Overview from '../components/Overview.svelte'
   import { nameOf, nameById } from '../lib/names.js'
+  import { trainingTime } from '../lib/summary.js'
 
   let seg = $state('overview')
   let exId = $state(null)
@@ -69,7 +70,7 @@
     <div class="card stack inner">
       {#each d.sessions as s (s.id)}
         <details>
-          <summary>{s.untimed ? $t('untimedSession') : `${$t('session')} ${hhmm(s.start)}${s.end ? ` · ${duration(s.end - s.start)}` : ` · ${$t('running')}`}`}</summary>
+          <summary>{s.untimed ? $t('untimedSession') : `${$t('session')} ${hhmm(s.start)}${s.end ? ` · ${duration(trainingTime(s, $logs ?? []).ms)}` : ` · ${$t('running')}`}`}</summary>
           {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
           {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
         </details>

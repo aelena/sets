@@ -1,5 +1,5 @@
 import { normalizeConfig, mergeConfig, exportConfig, cleanExercise, BACKUP_FORMAT } from './config.js'
-import { buildSummary } from './summary.js'
+import { buildSummary, trainingTime } from './summary.js'
 import { PACKS, CATALOG_MUSCLES } from './seed.js'
 import { planPack, missingMuscles, missingNames, planCuration } from './packs.js'
 import { ES_EXERCISES, ES_GROUPS, ES_ACTIVITIES } from './catalog.js'
@@ -157,6 +157,31 @@ export const createRepo = (db, clock = () => Date.now()) => {
       }
     })
     return touched
+  }
+
+  /**
+   * Once per phone (meta 'summaries-2'): timed sessions with bundled activities get their stored
+   * summary rebuilt, so it shows the total training time. Nothing else in them changes.
+   */
+  async function refreshSummaries(L) {
+    if (await db.meta.get('summaries-2')) return 0
+    const [sessions, logs, sets, exercises, activities] = await Promise.all([
+      db.sessions.toArray(), db.activityLogs.toArray(), db.sets.toArray(), db.exercises.toArray(), db.activities.toArray(),
+    ])
+    const exercisesById = Object.fromEntries(exercises.map(e => [e.id, e]))
+    const activitiesById = Object.fromEntries(activities.map(a => [a.id, a]))
+    let n = 0
+    for (const s of sessions) {
+      if (!trainingTime(s, logs).extra.length) continue
+      const summary = buildSummary({
+        session: s, sets: sets.filter(x => x.sessionId === s.id), rests: [], L,
+        activityLogs: logs.filter(l => l.sessionId === s.id), exercisesById, activitiesById,
+      })
+      await db.sessions.update(s.id, { summary })
+      n++
+    }
+    await db.meta.put({ key: 'summaries-2', at: clock() })
+    return n
   }
 
   /** The title printed on a session's recap image ("Killer day"); empty removes it. */
@@ -377,6 +402,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
       session: {
         id: session.id, start: iso(session.start), end: session.end ? iso(session.end) : null,
         minutes: session.end && !session.untimed ? Math.round((session.end - session.start) / 60000) : null, untimed: !!session.untimed,
+        trainingMinutes: session.end && !session.untimed ? Math.round(trainingTime(session, activityLogs).ms / 60000) : null,
         auto: !!session.auto, stats: session.stats ?? null, summary: session.summary, title: session.recapTitle ?? '',
       },
       sets: sets.map(s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
@@ -392,6 +418,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    setRecapTitle, sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

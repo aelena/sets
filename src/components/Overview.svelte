@@ -24,7 +24,7 @@
   const perWeek = $derived(weeks.map(w => ({ x: w.start, y: w.sessions })))
   const avgSessions = $derived(average(weeks, 'sessions'))
   const avgDays = $derived(average(weeks, 'days'))
-  const lengths = $derived(durations(sessions))
+  const lengths = $derived(durations(sessions, logs))
   const recent = $derived(lengths.slice(-10))
   const avgLength = $derived(recent.length ? recent.reduce((a, p) => a + p.y, 0) / recent.length : 0)
 

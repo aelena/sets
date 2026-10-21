@@ -1,5 +1,6 @@
 import { hhmm, dateKey } from './time.js'
 import { paceOf, formatPace } from './activity.js'
+import { trainingTime } from './summary.js'
 
 /** One row per set, flat, ready for Excel. Set number counts within (day, exercise). */
 export function setRows(sets, { exercises, groups, sessions }) {
@@ -27,12 +28,13 @@ export function setRows(sets, { exercises, groups, sessions }) {
   })
 }
 
-export const sessionRows = sessions =>
+export const sessionRows = (sessions, activityLogs = []) =>
   [...sessions].sort((a, b) => a.start - b.start).map(s => ({
     date: dateKey(s.start),
     start: hhmm(s.start),
     end: s.end ? hhmm(s.end) : '',
-    minutes: s.end ? Math.round((s.end - s.start) / 60000) : null,
+    minutes: s.end && !s.untimed ? Math.round((s.end - s.start) / 60000) : null,
+    training_minutes: s.end && !s.untimed ? Math.round(trainingTime(s, activityLogs).ms / 60000) : null,
     summary: s.summary ?? '',
   }))
 
@@ -62,7 +64,7 @@ export async function workbook(data) {
   const add = (rows, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name)
   add(setRows(data.sets, data), 'sets')
   add(activityRows(data.activityLogs ?? [], data), 'activities')
-  add(sessionRows(data.sessions), 'sessions')
+  add(sessionRows(data.sessions, data.activityLogs ?? []), 'sessions')
   add(noteRows(data.notes), 'notes')
   const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
   return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })

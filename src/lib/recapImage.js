@@ -98,7 +98,8 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
   const lines = detail === 'sparse' ? [] : data.lines
   const muscles = (data.muscles ?? []).slice(0, detail === 'sparse' ? 4 : 3).map(L.muscle)
   const musclePx = detail === 'sparse' ? 48 : 36
-  const fixed = 110 + 46 + (muscles.length ? musclePx + 44 : 0) + (data.bests ? 82 : 0) + (lines.length ? (story ? 110 : 84) : 0)
+  const partsH = data.parts ? 56 : 0
+  const fixed = partsH + 110 + 46 + (muscles.length ? musclePx + 44 : 0) + (data.bests ? 82 : 0) + (lines.length ? (story ? 110 : 84) : 0)
   const room = Math.max(0, Math.floor((bottom - topLimit - durPx * 0.75 - fixed) / lineH) + 1)
   const shown = lines.length > room ? lines.slice(0, Math.max(0, room - 1)) : lines
   const listed = shown.length + (shown.length < lines.length ? 1 : 0)
@@ -109,6 +110,13 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
   ctx.font = font(700, data.untimed ? Math.round(durPx * 0.7) : durPx)
   ctx.fillText(fit(ctx, data.untimed ? span : bigDuration(data.durationMs), inner + 6), pad - 6, y)
 
+  if (data.parts) {
+    y += 56
+    ctx.fillStyle = dim
+    ctx.font = font(400, 34)
+    const ex = data.parts.extra.map(p => `${p.name} ${Math.round(p.minutes)} min`).join(' + ')
+    ctx.fillText(fit(ctx, `${L.gym} ${bigDuration(data.parts.sessionMs)} + ${ex}`, inner), pad, y)
+  }
   y += 110
   const nf = new Intl.NumberFormat(lang)
   const stats = [[nf.format(data.sets), L.sets], [nf.format(data.exercises), L.exercises]]

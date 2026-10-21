@@ -102,3 +102,17 @@ describe('recap title', () => {
     expect(recapData({ session: { start: 0, end: 1 }, sets: [], exercisesById: {} }).title).toBe('')
   })
 })
+
+describe('recap with a bundled activity', () => {
+  it('uses the training time and says what it is made of', () => {
+    const MIN = 60000
+    const session = { id: 's', start: 10 * 60 * MIN, end: 11 * 60 * MIN + 5 * MIN }
+    const r = recapData({
+      session, sets: [], exercisesById: {}, activitiesById: { running: { name: 'Running', names: { es: 'Correr' } } }, lang: 'es',
+      activityLogs: [{ sessionId: 's', ts: 8 * 60 * MIN, activityId: 'running', minutes: 45, km: 8.5 }],
+    })
+    expect(r.durationMs).toBe(110 * MIN)
+    expect(r.parts).toEqual({ sessionMs: 65 * MIN, extra: [{ name: 'Correr', minutes: 45 }] })
+    expect(recapData({ session, sets: [], exercisesById: {} }).parts).toBeNull()
+  })
+})

@@ -2,6 +2,19 @@ import { duration, hhmm, dateKey } from './time.js'
 import { activityLabel } from './activity.js'
 import { nameById } from './names.js'
 
+/**
+ * A timed session's training time: its own duration plus the minutes of activities bundled into it,
+ * i.e. its activities logged outside its start..end (a morning run joined to the evening gym).
+ * Activities logged during the session are already inside its duration. Untimed: null.
+ * Returns { ms, sessionMs, extra: [log, ...] }.
+ */
+export function trainingTime(session, activityLogs = []) {
+  if (session.untimed || !session.end) return { ms: null, sessionMs: null, extra: [] }
+  const sessionMs = session.end - session.start
+  const extra = activityLogs.filter(l => l.sessionId === session.id && (l.ts < session.start || l.ts > session.end) && l.minutes)
+  return { ms: sessionMs + extra.reduce((a, l) => a + l.minutes * 60000, 0), sessionMs, extra }
+}
+
 /** What one logged set amounts to, in the exercise's own unit. */
 export const setLabel = s =>
   `${s.seconds != null ? `${s.seconds}s` : s.reps}${s.kg != null ? ` @${s.kg}kg` : ''}`
@@ -12,6 +25,11 @@ export const volume = sets => sets.reduce((a, s) => a + (s.kg != null && s.reps 
  * The small text kept with each session once it is stopped.
  * `L` holds the localized words so the summary is written in the UI language of the moment.
  */
+const totalPart = (session, logs, L) => {
+  const t = trainingTime({ ...session, end: session.end ?? Date.now() }, logs)
+  return t.extra.length ? ` · ${L.totalTime ?? 'total'} ${duration(t.ms)}` : ''
+}
+
 export function buildSummary({ session, sets, rests, exercisesById, L, activityLogs = [], activitiesById = {} }) {
   const end = session.end ?? Date.now()
   const order = []
@@ -28,7 +46,7 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
   const lines = [
     session.untimed
       ? `${dateKey(session.start)} · ${L.untimed}`
-      : `${dateKey(session.start)} ${hhmm(session.start)} → ${hhmm(end)} · ${duration(end - session.start)}${session.auto ? ` (${L.autoClosed})` : ''}`,
+      : `${dateKey(session.start)} ${hhmm(session.start)} → ${hhmm(end)} · ${duration(end - session.start)}${session.auto ? ` (${L.autoClosed})` : ''}${totalPart(session, activityLogs, L)}`,
     [`${sets.length} ${L.sets}`, `${order.length} ${L.exercises}`, activityLogs.length ? `${activityLogs.length} ${L.activities}` : null, vol ? `${Math.round(vol)} kg ${L.volume}` : null].filter(Boolean).join(' · '),
   ]
   if (done.length)

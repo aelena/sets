@@ -1,5 +1,6 @@
 import { MUSCLES } from './seed.js'
 import { dateKey } from './time.js'
+import { trainingTime } from './summary.js'
 
 /** Amber after a week without training it, stale after two. (user, 2026-10-16) */
 export const DUE_DAYS = 7
@@ -65,7 +66,7 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
     const r = at(s.start)
     if (!r) continue
     r.sessions++
-    if (!s.untimed) r.minutes += (s.end - s.start) / 60000
+    if (!s.untimed) r.minutes += trainingTime(s, activityLogs).ms / 60000
   }
   for (const x of [...sets, ...activityLogs]) at(midnight(x.date))?.days.add(x.date)
   for (const s of sets) {
@@ -83,8 +84,8 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
 }
 
 /** Completed sessions oldest first, with their length in minutes. */
-export const durations = sessions =>
-  sessions.filter(s => s.end && !s.untimed).sort((a, b) => a.start - b.start).map(s => ({ x: s.start, y: Math.round((s.end - s.start) / 60000) }))
+export const durations = (sessions, activityLogs = []) =>
+  sessions.filter(s => s.end && !s.untimed).sort((a, b) => a.start - b.start).map(s => ({ x: s.start, y: Math.round(trainingTime(s, activityLogs).ms / 60000) }))
 
 /** Mean of the last `n` weeks that are complete (the current week is still running). */
 export const average = (rows, key, n = 4) => {

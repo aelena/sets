@@ -37,8 +37,7 @@
   async function bundle() {
     const updated = await repo.bundleLoose(session.id, summaryWords(get(t)))
     if (updated) shownSummary.set(updated)
-    loose = null
-    notify(get(t)('bundled'))
+    loose = null // the rebuilt summary shows the change; a toast here would cover the buttons
   }
   const days = $derived(daysSince($settings.lastBackup, $now))
   const backupText = $derived(days == null ? $t('never') : days === 0 ? $t('todayLower') : $t('daysAgo', { d: days }))

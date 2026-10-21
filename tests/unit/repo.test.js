@@ -277,7 +277,42 @@ describe("bundling the day's loose rows into a timed session", () => {
     expect(s.summary).toContain('1 sets · 1 exercises · 1 activities')
     expect(s.summary).toContain('Rest: 1× · 2m 00s total · avg 2m 00s · longest 2m 00s')
     expect(s.summary).toContain('Running: 45 min · 8.5 km')
+    expect(s.summary.split('\n')[0]).toBe('2026-10-16 18:00 → 19:00 · 1h 00m · total 1h 45m') // gym + the morning run
+    expect((await repo.sessionExport(gym.id)).session).toMatchObject({ minutes: 60, trainingMinutes: 105 })
     expect((await repo.sessionExport(gym.id)).activities).toHaveLength(1)
     expect(await repo.bundleLoose(gym.id, W)).toMatchObject({ id: gym.id }) // nothing left: unchanged
+  })
+})
+
+describe('training time', async () => {
+  const { trainingTime } = await import('../../src/lib/summary.js')
+  const W = { ...L, activities: 'activities', untimed: 'untimed', totalTime: 'total' }
+
+  it('adds bundled activities, not the ones logged during the session', () => {
+    const session = { id: 's', start: 1000, end: 1000 + 60 * MIN }
+    const logs = [
+      { sessionId: 's', ts: 500, minutes: 45 }, // before: bundled
+      { sessionId: 's', ts: 2000, minutes: 20 }, // during: already counted
+      { sessionId: 'x', ts: 500, minutes: 30 }, // another session
+    ]
+    const t = trainingTime(session, logs)
+    expect(t).toMatchObject({ sessionMs: 60 * MIN, ms: 105 * MIN })
+    expect(t.extra).toHaveLength(1)
+    expect(trainingTime({ ...session, untimed: true }, logs).ms).toBeNull()
+  })
+
+  it('rebuilds stored summaries of sessions that already had a bundled run, once', async () => {
+    const run = await repo.logActivity({ activityId: 'running', minutes: 45, km: 8.5 }) // at T0
+    at(T0 + 3 * 60 * MIN); const gym = await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 + 4 * 60 * MIN); await repo.stopSession(W)
+    // as on a phone before 0.10.1: linked, but the summary was written without the total
+    await repo.db.activityLogs.update(run, { sessionId: gym.id })
+    await repo.db.sessions.update(gym.id, { summary: 'old text' })
+    expect(await repo.refreshSummaries(W)).toBe(1)
+    expect((await repo.db.sessions.get(gym.id)).summary.split('\n')[0]).toBe('2026-10-16 21:00 → 22:00 · 1h 00m · total 1h 45m')
+    await repo.db.sessions.update(gym.id, { summary: 'edited later' })
+    expect(await repo.refreshSummaries(W)).toBe(0) // once per phone
+    expect((await repo.db.sessions.get(gym.id)).summary).toBe('edited later')
   })
 })

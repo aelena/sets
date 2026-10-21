@@ -1,6 +1,7 @@
 import { ES_EXERCISES, ES_GROUPS, CURATE_1 } from './catalog.js'
 import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './catalog2.js'
 import { CURATE_3 } from './catalog3.js'
+import { REVIEW, PUSHUP_SUPERSERIES, CURATE_4 } from './catalog4.js'
 
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
@@ -246,6 +247,13 @@ export const PACKS = [
   // (appended to it), or, on a phone without one, comes as its own group before the Kegels
   CURATE_3,
   { id: 'chest-1', label: 'classic', appendTo: 'nuevo-grupo-4', before: ['kegels-men', 'kegels-women'], groups: [CHEST] },
+  // 0.11.0: Pec Deck reads as the pectoral fly; the user's superseries; a review of the main groups.
+  // The review packs append only to groups that exist (`appendOnly`): a deleted group stays deleted.
+  CURATE_4,
+  { id: 'warmup-2', label: 'starter', appendTo: 'my-warm-up-routine', appendOnly: true, groups: [{ name: 'My Warm up Routine', exercises: [PUSHUP_SUPERSERIES] }] },
+  ...[['chest', ['nuevo-grupo-4', 'chest']], ['biceps', 'biceps'], ['triceps', 'triceps'], ['shoulders', 'shoulders'],
+    ['legs', 'leg-day'], ['back', 'back'], ['core', 'core']].map(([k, to]) =>
+    ({ id: `review-${k}-1`, label: 'classic', appendTo: to, appendOnly: true, groups: [{ name: k, exercises: REVIEW[k] }] })),
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

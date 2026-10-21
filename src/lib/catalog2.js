@@ -69,6 +69,7 @@ export const CHEST = {
     ex('Cable Crossover', 'Cruce de poleas', { sets: 3, reps: 12, kg: 15 }, ['chest'],
       'Cables high, step forward, bring the hands together in front of the hips, slow return.',
       'Poleas altas, un paso adelante, junta las manos delante de la cadera y vuelve despacio.'),
+    // keeps its original name so it still meets the user's renamed one; curate-4 then renames both
     ex('Pec Deck', 'Contractora (pec deck)', { sets: 3, reps: 12, kg: 40 }, ['chest'],
       'Machine fly: elbows slightly bent, bring the handles together, squeeze, open under control.',
       'Aperturas en máquina: codos algo flexionados, junta los agarres, aprieta y abre controlando.'),

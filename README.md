@@ -75,8 +75,8 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 
 The app ships with groups to start from, each exercise with a short form cue in English and Spanish, its muscles and a link to a YouTube search for good form. Weights are placeholders.
 
-- **Starter:** Kettlebell Supergroup and My Warm up Routine.
-- **Classic:** Biceps, Triceps, Shoulders, Chest (bench, incline and decline press, dumbbell press, flyes, cable crossover, pec deck, seated chest press, chest dips; joined to your own chest group when you have one), Leg Day (with hip thrust and glute bridge), Core, Back.
+- **Starter:** Kettlebell Supergroup and My Warm up Routine (with the Push-up Touch Superseries: 29 push-ups with touches and climbers in between).
+- **Classic:** Biceps, Triceps, Shoulders, Chest (bench, incline and decline press, dumbbell and incline dumbbell press and flyes, cable crossovers, pectoral fly (pec deck), seated chest press, pullover, chest dips; joined to your own chest group when you have one), Leg Day (with hip thrust, glute bridge, goblet, front and hack squats), Core, Back. A review in 0.11.0 added the common staples each group was missing (EZ-bar and incline curls, kickbacks, Arnold press, rows, hollow hold, Pallof press...).
 - **Push-up variations** (wide, incline, decline, archer, pike, clap, Hindu, Spiderman), added to a *Functional* group when there is one, as their own group otherwise.
 - **Kegels · Men** and **Kegels · Women**, the last groups: quick squeezes, long holds, elevator, reverse Kegels and bridge with Kegel, cued for each body, with their own history and the *Pelvic floor* muscle.
 

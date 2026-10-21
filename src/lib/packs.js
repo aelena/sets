@@ -15,7 +15,9 @@ export function planPack(pack, { exercises, groups }) {
 
   // `appendTo`: the pack's exercises go at the end of that group (missing ones only); without
   // that group on the phone, the pack's group is added as usual
-  const target = pack.appendTo && groups.find(g => g.id === pack.appendTo)
+  const targets = [pack.appendTo].flat().filter(Boolean)
+  const target = targets.map(id => groups.find(g => g.id === id)).find(Boolean)
+  if (pack.appendOnly && !target) return { addExercises: [], addGroups: [], append: null }
   if (target) {
     const ids = incoming.groups.flatMap(g => g.exerciseIds).filter(id => !target.exerciseIds.includes(id))
     return { addExercises, addGroups: [], append: { id: target.id, exerciseIds: [...target.exerciseIds, ...new Set(ids)] } }

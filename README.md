@@ -93,7 +93,7 @@ One-time curation steps (`curate-1` to `curate-3`) named hand-built exercises pr
 
 ## Versions
 
-The version shows in **Settings → About**. Each release bumps it: the middle number for new features, the last one for fixes; releases are tagged in git (`v0.9.0`).
+After an update, the first time the app opens it shows the new version and a few lines on what changed (from `src/lib/changelog.js`), with an OK button; skipped versions are listed too (up to three). The version also shows in **Settings → About**. Each release bumps it: the middle number for new features, the last one for fixes; releases are tagged in git (`v0.9.0`).
 
 ## Settings
 

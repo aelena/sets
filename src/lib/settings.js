@@ -23,6 +23,7 @@ const defaults = {
   driveAuto: false,
   todayOnly: false,
   stopwatchFace: 'digital',
+  lastSeenVersion: null, // the version whose what's-new screen was dismissed
   keepAwake: 'session', // 'session' (timed session or rest running) | 'always' | 'off'
   recapBg: 'ink',
 }

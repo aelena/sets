@@ -18,8 +18,23 @@
   import Edit from './views/Edit.svelte'
   import Settings from './views/Settings.svelte'
   import Splash from './components/Splash.svelte'
+  import WhatsNew from './components/WhatsNew.svelte'
+  import { newSince } from './lib/changelog.js'
+  import { db } from './lib/store.js'
 
   let ready = $state(false)
+
+  // after an update, once: what changed. A brand-new install (nothing seen, nothing logged) skips it.
+  const version = __APP_VERSION__
+  let news = $state([])
+  async function checkNews() {
+    const seen = $settings.lastSeenVersion
+    if (seen === version) return
+    if (!seen && !(await db.sets.count()) && !(await db.sessions.count())) { $settings.lastSeenVersion = version; return }
+    news = newSince(seen, version)
+    if (!news.length) $settings.lastSeenVersion = version
+  }
+  const dismissNews = () => { $settings.lastSeenVersion = version; news = [] }
 
   // keep the screen on: always, or while a timed session or a rest is running, per Settings
   $effect(() => {
@@ -50,6 +65,7 @@
     await closeStale()
     await repo.refreshSummaries(summaryWords(get(t))) // once: totals for sessions with bundled activities
     ready = true
+    checkNews()
     resumeDrive() // back from Google's sign-in page?
     const onVisible = () => document.visibilityState === 'visible' && closeStale()
     document.addEventListener('visibilitychange', onVisible)
@@ -66,6 +82,7 @@
   {#if $activeRest}<RestTimer rest={$activeRest} />{/if}
   {#if $shownSummary}<SummaryModal session={$shownSummary} onclose={() => shownSummary.set(null)} />{/if}
   <Toast />
+  {#if news.length}<WhatsNew {version} entries={news} ok={dismissNews} />{/if}
 {:else}
   <Splash />
 {/if}

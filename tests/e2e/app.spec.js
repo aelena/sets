@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 
+const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version
+
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now() })))
+  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v })), VERSION)
   await page.goto('/')
 })
 
@@ -581,4 +583,27 @@ test('the push-up superseries is in the warm-up; Chest has the pectoral fly and 
   await expect(page.locator('.title')).toContainText(['Incline Dumbbell Press', 'Pectoral Fly (Pec Deck)', 'Incline Dumbbell Fly'])
   await page.getByRole('tab', { name: 'Back', exact: true }).click()
   await expect(page.locator('.title')).toContainText(['One-arm Dumbbell Row', 'Bent-over Dumbbell Row'])
+})
+
+test("after an update the what's-new screen shows once; a fresh install skips it", async ({ page }) => {
+  // each reload: 1 = fresh install (nothing seen, nothing logged), 2 = updated from 0.10.1
+  await page.addInitScript(() => {
+    const step = Number(sessionStorage.getItem('wn') ?? 0) + 1
+    sessionStorage.setItem('wn', step)
+    const s = JSON.parse(localStorage.getItem('exercise-tracker:settings'))
+    localStorage.setItem('exercise-tracker:settings', JSON.stringify({ ...s, lastSeenVersion: step === 1 ? null : '0.10.1' }))
+  })
+  const dialog = page.getByRole('dialog', { name: "What's new" })
+  const seen = () => page.evaluate(() => JSON.parse(localStorage.getItem('exercise-tracker:settings')).lastSeenVersion)
+  await page.reload()
+  await expect(page.getByRole('tab').first()).toBeVisible()
+  await expect.poll(seen).toBe(VERSION)
+  await expect(dialog).toHaveCount(0)
+  await page.reload()
+  await expect(dialog).toBeVisible()
+  await expect(page.getByTestId('whatsnew-version')).toHaveText(VERSION)
+  await expect(dialog).toContainText('0.11.0')
+  await dialog.getByRole('button', { name: 'OK' }).click()
+  await expect(dialog).toHaveCount(0)
+  expect(await seen()).toBe(VERSION)
 })

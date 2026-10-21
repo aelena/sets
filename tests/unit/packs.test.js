@@ -62,6 +62,10 @@ describe('applyPacks', () => {
     const leg = groups.find(g => g.id === 'leg-day').exerciseIds
     expect(leg.indexOf('glute-bridge')).toBe(leg.indexOf('barbell-hip-thrust') + 1) // appended in order, no new group
     expect(leg.at(-1)).toBe('seated-calf-raise') // then the review additions
+    const byName = Object.fromEntries((await repo.library()).exercises.map(e => [e.id, e.name]))
+    const pushups = groups.find(g => g.name === 'Push ups').exerciseIds
+    expect(byName[pushups.at(-1)]).toBe('Burpees') // no Functional group on a fresh phone
+    expect(groups.find(g => g.id === 'core').exerciseIds.slice(-3).map(id => byName[id])).toEqual(['Lateral Crunch', 'Scissor Kicks', 'Cross Scissors'])
   })
 
   it('phone with hand-made content from v3: only back-1 is added, nothing of the user\'s changes', async () => {

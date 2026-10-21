@@ -2,6 +2,7 @@ import { ES_EXERCISES, ES_GROUPS, CURATE_1 } from './catalog.js'
 import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './catalog2.js'
 import { CURATE_3 } from './catalog3.js'
 import { REVIEW, PUSHUP_SUPERSERIES, CURATE_4 } from './catalog4.js'
+import { BURPEES, CORE_2 } from './catalog5.js'
 
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
@@ -254,6 +255,9 @@ export const PACKS = [
   ...[['chest', ['nuevo-grupo-4', 'chest']], ['biceps', 'biceps'], ['triceps', 'triceps'], ['shoulders', 'shoulders'],
     ['legs', 'leg-day'], ['back', 'back'], ['core', 'core']].map(([k, to]) =>
     ({ id: `review-${k}-1`, label: 'classic', appendTo: to, appendOnly: true, groups: [{ name: k, exercises: REVIEW[k] }] })),
+  // 0.12.1: burpees in Functional (or the Push ups group on a phone without it); more core
+  { id: 'functional-2', label: 'classic', appendTo: ['nuevo-grupo-2', 'push-ups'], appendOnly: true, groups: [{ name: 'Functional', exercises: BURPEES }] },
+  { id: 'core-2', label: 'classic', appendTo: 'core', appendOnly: true, groups: [{ name: 'Core', exercises: CORE_2 }] },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

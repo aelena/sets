@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.12.1',
+    en: ['Burpees in Functional.', 'Core: lateral crunch (elbow to the opposite knee), scissor kicks, cross scissors.'],
+    es: ['Burpees en Funcional.', 'Core: crunch lateral (codo a la rodilla contraria), tijeras, tijeras cruzadas.'],
+  },
+  {
     version: '0.12.0',
     en: ['This screen: after each update, what changed.'],
     es: ['Esta pantalla: tras cada actualización, qué ha cambiado.'],

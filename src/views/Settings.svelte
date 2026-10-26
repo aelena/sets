@@ -8,12 +8,14 @@
   import { backupNow } from '../lib/backup.js'
   import * as drive from '../lib/drive.js'
   import * as wake from '../lib/wakeLock.js'
+  import ShareApp from '../components/ShareApp.svelte'
   const wakeHeld = wake.held
 
   let persisted = $state(null)
   let driveOn = $state(drive.connected())
   let pending = $state(null) // parsed config waiting for merge / replace
   let error = $state('')
+  let sharing = $state(false)
 
   onMount(async () => { persisted = (await navigator.storage?.persisted?.()) ?? false })
 
@@ -135,8 +137,10 @@
   <div class="small">{persisted ? $t('persisted') : $t('notPersisted')}</div>
 
   <h2>{$t('about')}</h2>
+  <button onclick={() => (sharing = true)}>{$t('shareApp')}</button>
   <div class="muted small">Sets v{__APP_VERSION__} · MIT · github.com/aelena</div>
 </main>
+{#if sharing}<ShareApp onclose={() => (sharing = false)} />{/if}
 
 <style>
   .tight { gap: 6px; }

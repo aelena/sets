@@ -187,6 +187,12 @@ export const createRepo = (db, clock = () => Date.now()) => {
   /** The title printed on a session's recap image ("Killer day"); empty removes it. */
   const setRecapTitle = (id, title) => db.sessions.update(id, { recapTitle: String(title ?? '').trim().slice(0, 60) })
 
+  /** The latest finished timed session of a day, the one loose rows logged later that day can join. */
+  async function timedSessionOn(day) {
+    const all = await db.sessions.toArray()
+    return all.filter(s => s.end && !s.untimed && dateKey(s.start) === day).sort((a, b) => b.start - a.start)[0] ?? null
+  }
+
   /** Loose rows (outside any session) of the same day as a session: what could be bundled into it. */
   async function looseOnDayOf(id) {
     const session = await db.sessions.get(id)
@@ -418,6 +424,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, timedSessionOn, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

@@ -66,6 +66,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 
 - **Session summary:** after ■ or Complete, stored as plain text: time or day, sets, exercises, activities, volume, rests and every exercise's sets.
 - **Recap image for Instagram:** from the summary or any session in History. A 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, muscles trained, personal bests) or **Full** (plus every exercise), over a gradient, a bundled gym photo or one picked from Photos, with an optional title of your own ("Killer day") printed big under the date and kept with the session. **Share** opens the iOS share sheet, Instagram included. Every recap prints `aelena.com/sets`.
+- **A run after the gym:** when a timed session is over and you log something later that day outside it (a run on the way home), the bar above the groups offers **Add to today's session** next to **Complete**: the run joins the session, the summary and total time are rebuilt, and **Share image** makes the recap again with it. The same is offered on the session in History while the day still has loose items.
 - **Session data:** **Export session data** saves the session's raw JSON through the share sheet (Files, the Google Drive app, AirDrop). With a Google client ID set up, **Upload to Google Drive** puts it straight into a `Sets` folder, and Settings can do it after every session. See [Google Drive](#google-drive).
 - **Excel (.xlsx):** one row per set, plus sheets for activities, sessions and notes. A real workbook, not a CSV, so Excel in Spanish and other European locales opens it correctly.
 - **Exercise config (JSON):** export your groups and exercises, edit them on a computer, import them back (merge or replace). See [The config file](#the-config-file).
@@ -97,7 +98,7 @@ After an update, the first time the app opens it shows the new version and a few
 
 ## Settings
 
-Your name, English or Español, light / dark / system, five bundled monospace fonts (JetBrains Mono by default, IBM Plex Mono, Victor Mono, Fira Code, Space Mono), keep the screen on, Google Drive, exports and imports, backup and restore, and whether the phone keeps the app's storage permanently.
+Your name, English or Español, light / dark / system, five bundled monospace fonts (JetBrains Mono by default, IBM Plex Mono, Victor Mono, Fira Code, Space Mono), keep the screen on, Google Drive, exports and imports, backup and restore, whether the phone keeps the app's storage permanently, and **Share Sets**: a QR code for `https://aelena.com/sets/` to show someone at the gym, with the link and the QR as an image for the share sheet. The same QR is in [docs/sets-qr.png](docs/sets-qr.png); `npm run qr` regenerates both if the address ever changes.
 
 ## Your data
 

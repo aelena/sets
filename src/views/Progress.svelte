@@ -1,8 +1,9 @@
 <script>
   import { liveQuery } from 'dexie'
-  import { db, exercises, groups } from '../lib/store.js'
+  import { db, repo, exercises, groups } from '../lib/store.js'
   import { dailyActivity, formatPace, activityLabel } from '../lib/activity.js'
-  import { t } from '../lib/i18n.js'
+  import { t, summaryWords } from '../lib/i18n.js'
+  import { get } from 'svelte/store'
   import { settings } from '../lib/settings.js'
   import { daily, metricsFor } from '../lib/metrics.js'
   import { dateKey, duration, hhmm } from '../lib/time.js'
@@ -61,6 +62,8 @@
   const sessionDays = $derived(new Set(($sessions ?? []).filter(s => s.end).map(s => dateKey(s.start))))
   const otherDays = $derived(new Set(allDays.filter(d => d.sets.length || d.logs.length).map(d => d.date)))
   const pickedDay = $derived(allDays.find(d => d.date === picked))
+  const hasLoose = d => d.sets.some(s => !s.sessionId) || d.logs.some(l => !l.sessionId)
+  const joinDay = async s => { recapFor = (await repo.bundleLoose(s.id, summaryWords(get(t)))) ?? s }
   const longDate = d => new Intl.DateTimeFormat($settings.lang, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(midnight(d))
 </script>
 
@@ -72,6 +75,7 @@
         <details>
           <summary>{s.untimed ? $t('untimedSession') : `${$t('session')} ${hhmm(s.start)}${s.end ? ` · ${duration(trainingTime(s, $logs ?? []).ms)}` : ` · ${$t('running')}`}`}</summary>
           {#if s.summary}<pre class="summary">{s.summary}</pre>{/if}
+          {#if s.end && !s.untimed && hasLoose(d)}<button class="share" onclick={() => joinDay(s)}>{$t('addToThisSession')}</button>{/if}
           {#if s.end}<button class="share" onclick={() => (recapFor = s)}>{$t('shareImage')}</button>{/if}
         </details>
       {/each}

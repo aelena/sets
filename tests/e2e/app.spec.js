@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { CHANGELOG } from '../../src/lib/changelog.js'
 
 const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version
 
@@ -511,6 +512,54 @@ test('a morning run joins the evening gym session when it ends', async ({ page }
   await expect(page.getByTestId('loose-bar')).toHaveCount(0)
 })
 
+test('a run after the gym session joins it from the loose bar, and the image is made again', async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 9, 20, 18, 0))
+  await page.reload()
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.clock.setFixedTime(new Date(2026, 9, 20, 19, 0))
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await expect(page.getByTestId('bundle')).toHaveCount(0) // nothing loose yet
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  await page.clock.setFixedTime(new Date(2026, 9, 20, 19, 30))
+  await page.getByRole('tab', { name: 'Cardio & more' }).click()
+  await page.getByRole('button', { name: 'Log activity: Running' }).click()
+  await page.getByLabel('Duration (min)').fill('30')
+  await page.getByLabel('Distance (km)').fill('5')
+  await page.getByRole('button', { name: 'Log activity', exact: true }).click()
+  const bar = page.getByTestId('loose-bar')
+  await expect(bar).toContainText('1 logged outside a timed session today')
+  await bar.getByRole('button', { name: "Add to today's session" }).click()
+  await expect(page.getByTestId('summary')).toContainText('18:00 → 19:00 · 1h 00m · total 1h 30m')
+  await expect(page.getByTestId('summary')).toContainText('Running: 30 min · 5 km')
+  await expect(page.getByTestId('bundle')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Share image' }).click()
+  await expect(page.getByTestId('recap-preview')).toBeVisible()
+  await page.getByRole('dialog', { name: 'Session recap' }).getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('button', { name: 'Close' }).last().click()
+  await expect(bar).toHaveCount(0)
+
+  // History shows one session for the day, with the run in it
+  await page.getByRole('button', { name: 'Progress' }).click()
+  await page.getByRole('button', { name: 'History' }).click()
+  await page.getByText('Session 18:00 · 1h 30m').click()
+  await expect(page.locator('details pre')).toContainText('Running: 30 min · 5 km')
+  await expect(page.getByRole('button', { name: "Add the day's loose items to this session" })).toHaveCount(0)
+})
+
+test('Settings → Share Sets shows the QR code and the address', async ({ page }) => {
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Share Sets' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Share Sets' })
+  await expect(sheet.getByTestId('qr')).toBeVisible()
+  await expect(sheet.getByTestId('qr')).toHaveAttribute('aria-label', 'https://aelena.com/sets/')
+  await expect(sheet).toContainText('aelena.com/sets')
+  await sheet.getByRole('button', { name: 'Close', exact: true }).first().click()
+  await expect(sheet).toHaveCount(0)
+})
+
 test('keeping it separate leaves the run for the Complete bar', async ({ page }) => {
   await page.getByRole('tab', { name: 'Cardio & more' }).click()
   await page.getByRole('button', { name: 'Log activity: Running' }).click()
@@ -602,7 +651,7 @@ test("after an update the what's-new screen shows once; a fresh install skips it
   await page.reload()
   await expect(dialog).toBeVisible()
   await expect(page.getByTestId('whatsnew-version')).toHaveText(VERSION)
-  await expect(dialog).toContainText('0.11.0')
+  await expect(dialog).toContainText(CHANGELOG[1].version) // the previous release is listed too
   await dialog.getByRole('button', { name: 'OK' }).click()
   await expect(dialog).toHaveCount(0)
   expect(await seen()).toBe(VERSION)

@@ -68,6 +68,10 @@ const en = {
   notYet: 'Not trained yet', sessionsPerWeek: 'Sessions per week', avgPerWeek: 'avg {n} per week (last 4 weeks)',
   trainingDaysAvg: '{n} training days per week', showTable: 'Show as a table', week: 'Week', trainingDays: 'Training days',
   sessionLength: 'Session length', avgLength: 'avg {n} min over the last {k}', weekOf: 'week of {d}',
+  shareApp: 'Share Sets', shareAppHint: 'Scan to open the app. Free, no App Store: add it to the home screen from Safari.',
+  shareText: 'Sets: log your gym and home training on your phone. Free, no App Store.',
+  shareLink: 'Share link', shareQr: 'Share QR image', copyLink: 'Copy link',
+  addToSession: "Add to today's session", addToThisSession: 'Add the day\'s loose items to this session',
 }
 
 const es = {
@@ -137,6 +141,10 @@ const es = {
   notYet: 'Aún sin entrenar', sessionsPerWeek: 'Sesiones por semana', avgPerWeek: 'media {n} por semana (últimas 4)',
   trainingDaysAvg: '{n} días de entreno por semana', showTable: 'Ver como tabla', week: 'Semana', trainingDays: 'Días de entreno',
   sessionLength: 'Duración de la sesión', avgLength: 'media {n} min en las últimas {k}', weekOf: 'semana del {d}',
+  shareApp: 'Compartir Sets', shareAppHint: 'Escanea para abrir la app. Gratis, sin App Store: añádela a la pantalla de inicio desde Safari.',
+  shareText: 'Sets: apunta tu entreno de gimnasio y de casa en el móvil. Gratis, sin App Store.',
+  shareLink: 'Compartir enlace', shareQr: 'Compartir imagen QR', copyLink: 'Copiar enlace',
+  addToSession: 'Añadir a la sesión de hoy', addToThisSession: 'Añadir lo suelto del día a esta sesión',
 }
 
 export const dictionaries = { en, es }

@@ -1,7 +1,7 @@
 {
   "name": "exercise-tracker",
   "private": true,
-  "version": "0.12.1",
+  "version": "0.13.0",
   "type": "module",
   "description": "Opinionated offline PWA to log gym and home training sets on an iPhone",
   "author": "aelena",
@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "icons": "pwa-assets-generator",
+    "qr": "node scripts/qr.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:recaps": "cross-env RECAPS=1 playwright test tests/e2e/recap.spec.js --project=iphone-webkit"
@@ -21,6 +22,7 @@
     "@vite-pwa/assets-generator": "^2.0.0",
     "cross-env": "^10.1.0",
     "fake-indexeddb": "^6.2.5",
+    "qrcode": "^1.5.4",
     "svelte": "^5.57.2",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",

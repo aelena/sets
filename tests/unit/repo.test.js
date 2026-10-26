@@ -282,6 +282,25 @@ describe("bundling the day's loose rows into a timed session", () => {
     expect((await repo.sessionExport(gym.id)).activities).toHaveLength(1)
     expect(await repo.bundleLoose(gym.id, W)).toMatchObject({ id: gym.id }) // nothing left: unchanged
   })
+
+  it('a run logged after the gym session joins it later: the day has one timed session to join', async () => {
+    expect(await repo.timedSessionOn('2026-10-16')).toBeNull()
+    at(T0); const gym = await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    at(T0 + 60 * MIN); await repo.stopSession(W)
+    expect((await repo.timedSessionOn('2026-10-16')).id).toBe(gym.id)
+    expect(await repo.timedSessionOn('2026-10-17')).toBeNull()
+    at(T0 + 90 * MIN); const run = await repo.logActivity({ activityId: 'running', minutes: 30, km: 5 }) // home, then out for a run
+    expect((await repo.pendingAdHoc()).days).toEqual(['2026-10-16'])
+    const s = await repo.bundleLoose(gym.id, W)
+    expect((await repo.db.activityLogs.get(run)).sessionId).toBe(gym.id)
+    expect(s.summary.split('\n')[0]).toBe('2026-10-16 18:00 → 19:00 · 1h 00m · total 1h 30m')
+    expect(s.summary).toContain('Running: 30 min · 5 km')
+    expect((await repo.pendingAdHoc()).days).toEqual([]) // the loose bar is gone
+    // a second timed session the same day is the one later rows join
+    at(T0 + 120 * MIN); const late = await repo.startSession(); at(T0 + 150 * MIN); await repo.stopSession(W)
+    expect((await repo.timedSessionOn('2026-10-16')).id).toBe(late.id)
+  })
 })
 
 describe('training time', async () => {

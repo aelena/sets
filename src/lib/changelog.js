@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.13.0',
+    en: ['Settings → Share Sets: a QR code and the link, to pass the app on.', 'Back from the gym and off for a run? "Add to today\'s session" joins it to the session and remakes the image.'],
+    es: ['Ajustes → Compartir Sets: un código QR y el enlace, para pasar la app.', '¿Del gimnasio a correr? "Añadir a la sesión de hoy" la suma a la sesión y rehace la imagen.'],
+  },
+  {
     version: '0.12.1',
     en: ['Burpees in Functional.', 'Core: lateral crunch (elbow to the opposite knee), scissor kicks, cross scissors.'],
     es: ['Burpees en Funcional.', 'Core: crunch lateral (codo a la rodilla contraria), tijeras, tijeras cruzadas.'],

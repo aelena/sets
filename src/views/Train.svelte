@@ -77,6 +77,18 @@
   const looseText = $derived(loose.days.length === 1 && loose.days[0] === todayKey
     ? $t('looseToday', { n: looseCount })
     : $t('looseDays', { n: looseCount, k: loose.days.length }))
+  // a timed session already finished today: loose rows logged after it (a run on the way home) can still join it
+  let todaySession = $state(null)
+  $effect(() => {
+    const day = todayKey
+    const sub = liveQuery(() => repo.timedSessionOn(day)).subscribe(v => (todaySession = v))
+    return () => sub.unsubscribe()
+  })
+  const canJoin = $derived(!!todaySession && !$activeSession && loose.days.includes(todayKey))
+  const addToSession = async () => {
+    const updated = await repo.bundleLoose(todaySession.id, summaryWords(get(t)))
+    if (updated) shownSummary.set(updated)
+  }
   const complete = async () => {
     const touched = await repo.completeAdHoc(summaryWords(get(t)))
     if (touched.length) shownSummary.set(touched.at(-1))
@@ -136,8 +148,9 @@
 <main class="view">
   {#if looseCount}
     <div class="loose card row" data-testid="loose-bar">
-      <span class="grow small">{looseText}</span>
-      <button class="primary" onclick={complete}>{$t('complete')}</button>
+      <span class="grow small" class:full={canJoin}>{looseText}</span>
+      {#if canJoin}<button class="grow" onclick={addToSession}>{$t('addToSession')}</button>{/if}
+      <button class="primary" class:grow={canJoin} onclick={complete}>{$t('complete')}</button>
     </div>
   {/if}
   {#if nagBackup}
@@ -226,7 +239,9 @@
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
   .ticking { color: var(--flame); border-color: var(--flame); }
-  .loose { padding: 6px 6px 6px 12px; margin-bottom: 12px; border-color: var(--accent); }
+  .loose { padding: 6px 6px 6px 12px; margin-bottom: 12px; border-color: var(--accent); flex-wrap: wrap; }
+  .loose .full { flex-basis: 100%; padding: 6px 0 2px; }
+  .loose button { padding: 0 10px; }
   .toggle[aria-pressed='true'] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
   .today-bar { max-width: 608px; margin: 10px auto 0; color: var(--ok); font-weight: 700; }
   .activity { padding: 6px 8px 6px 12px; }

@@ -46,6 +46,7 @@ Updates arrive on their own: open the app, and if nothing changed, close it and 
 - **Personal bests:** a small flame marks a set no earlier set matched on both weight and reps (or seconds). Per exercise, from its 12th training day: before that nearly every set would be a best.
 - **Current workout view:** the ✓ in the top bar lists everything in the current workout from any group in one list, for days that mix groups, with the **kg tally** so far: per exercise on each row, and `4 sets · 2 exercises · 960 kg` at the top.
 - **Body weight:** set yours in **Settings → Body weight (kg)** and bodyweight sets (pull-ups, push-ups, dips: kg left empty) count reps × body weight in every kg total: the tally, the summary, the recap image, weekly volume, the volume chart and the Excel export. The body weight of the day is kept on each set, so an old session does not change when you do. Sets logged before a body weight was set stay out of the totals; max kg charts only count weight added.
+- **Lifts per rep:** for compound moves, **Edit → exercise → Lifts per rep** says how many times one rep lifts the weight (a 3-phase curl: 3; a superseries: its moves). Every kg total multiplies by it. The value is stamped on each set when logged, like the body weight; sets from before use the exercise's current value.
 
 ### Training with a partner
 
@@ -152,7 +153,7 @@ Groups and exercises can be written by hand and imported in **Settings → Impor
 ```
 
 - A group entry can be an exercise **id**, an exercise **name**, or a full exercise object. Names are matched case-insensitively against the file and against what is already on the phone, so the same exercise in two groups stays one exercise.
-- Exercise fields: `name` (required, English), `names.es`, `type` (`reps` default, or `time`), `sets`, `reps` or `seconds`, `kg` (omit for bodyweight), `perSide`, `muscles` (`chest`, `back`, `shoulders`, `biceps`, `triceps`, `forearms`, `core`, `glutes`, `quads`, `hamstrings`, `calves`, `pelvicFloor`, `fullBody`), `desc`, `link`. `id` is optional: one is derived from the name.
+- Exercise fields: `name` (required, English), `names.es`, `type` (`reps` default, or `time`), `sets`, `reps` or `seconds`, `kg` (omit for bodyweight), `lifts` (lifts per rep for compound moves, omit for 1), `perSide`, `muscles` (`chest`, `back`, `shoulders`, `biceps`, `triceps`, `forearms`, `core`, `glutes`, `quads`, `hamstrings`, `calves`, `pelvicFloor`, `fullBody`), `desc`, `link`. `id` is optional: one is derived from the name.
 - A description written as `EN: …` and `ES: …` lines shows the line for the app's language.
 - **Merge** adds and updates groups and exercises and keeps the rest. **Replace** makes the groups exactly those in the file. Exercises no longer used are archived, never deleted, so logged sets keep their names.
 
@@ -160,10 +161,10 @@ Groups and exercises can be written by hand and imported in **Settings → Impor
 
 Sheet `sets`, one row per set:
 
-| date | time | exercise | exercise_es | group | set_no | reps | seconds | kg | body_kg | volume_kg | session | exercise_id |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| date | time | exercise | exercise_es | group | set_no | reps | seconds | kg | body_kg | lifts | volume_kg | session | exercise_id |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
-`set_no` counts within the day and exercise; `body_kg` is the body weight kept on a bodyweight set; `volume_kg` is reps × kg, or reps × body_kg for a bodyweight set. A `partner sets` sheet with the same columns appears when a training partner has logged sets. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
+`set_no` counts within the day and exercise; `body_kg` is the body weight kept on a bodyweight set; `lifts` the lifts per rep (1 unless set); `volume_kg` is reps × kg × lifts, or reps × body_kg × lifts for a bodyweight set. A `partner sets` sheet with the same columns appears when a training partner has logged sets. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
 
 ## Google Drive
 

@@ -17,6 +17,7 @@ export const cleanExercise = (raw, id = raw.id) => {
     reps: type === 'reps' ? num(raw.reps) ?? 1 : null,
     seconds: type === 'time' ? num(raw.seconds) ?? 30 : null,
     kg: num(raw.kg),
+    lifts: num(raw.lifts) > 1 ? Math.round(num(raw.lifts)) : null, // lifts per rep for compound moves; null = 1
     perSide: !!raw.perSide,
     desc: str(raw.desc),
     link: str(raw.link),

@@ -1,6 +1,6 @@
 import { MUSCLES } from './seed.js'
 import { dateKey } from './time.js'
-import { trainingTime, loadOf } from './summary.js'
+import { trainingTime, setVolume } from './summary.js'
 
 /** Amber after a week without training it, stale after two. (user, 2026-10-16) */
 export const DUE_DAYS = 7
@@ -50,7 +50,7 @@ export const weekStart = ms => {
  * The last `weeks` weeks, oldest first, Monday to Sunday:
  * completed sessions, training days (any set or activity, sessions or not) and minutes in sessions.
  */
-export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now = Date.now() }) {
+export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now = Date.now(), exercisesById = {} }) {
   // calendar arithmetic, not 7 × 24 h: a window spanning a clock change must still land on Mondays 00:00
   const rows = Array.from({ length: weeks }, (_, i) => {
     const d = new Date(weekStart(now))
@@ -71,7 +71,7 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
   for (const x of [...sets, ...activityLogs]) at(midnight(x.date))?.days.add(x.date)
   for (const s of sets) {
     const r = at(midnight(s.date))
-    if (r && loadOf(s) != null && s.reps != null) r.volume += loadOf(s) * s.reps
+    if (r) r.volume += setVolume(s, exercisesById[s.exerciseId])
   }
   for (const l of activityLogs) {
     const r = at(midnight(l.date))

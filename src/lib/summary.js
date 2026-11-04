@@ -22,8 +22,17 @@ export const setLabel = s =>
 /** The weight a set moved: its kg, or the body weight stamped on a bodyweight set (`bw`). */
 export const loadOf = s => s.kg ?? s.bw ?? null
 
-/** kg × reps over the sets; bodyweight sets count their body weight when one was known. Timed sets: nothing. */
-export const volume = sets => sets.reduce((a, s) => a + (loadOf(s) != null && s.reps != null ? loadOf(s) * s.reps : 0), 0)
+/**
+ * How many times one rep lifts the weight: stamped on the set when logged (`lifts`), else the
+ * exercise's current setting (sets logged before it had one), else once. A 3-phase curl is 3.
+ */
+export const liftsOf = (s, exercise) => s.lifts ?? exercise?.lifts ?? 1
+
+/** One set's kg: load × reps × lifts per rep; 0 for timed sets or when no load is known. */
+export const setVolume = (s, exercise) => (loadOf(s) != null && s.reps != null ? loadOf(s) * s.reps * liftsOf(s, exercise) : 0)
+
+/** kg over the sets; `exercisesById` supplies the lifts per rep for sets logged before it was stamped. */
+export const volume = (sets, exercisesById = {}) => sets.reduce((a, s) => a + setVolume(s, exercisesById[s.exerciseId]), 0)
 
 /**
  * The small text kept with each session once it is stopped.
@@ -57,7 +66,7 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
   const done = rests.filter(r => r.end)
   const restMs = done.map(r => r.end - r.start)
   const total = restMs.reduce((a, b) => a + b, 0)
-  const vol = volume(sets)
+  const vol = volume(sets, exercisesById)
 
   const lines = [
     session.untimed
@@ -79,7 +88,7 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
     lines.push(`${nameById(activitiesById, a.activityId, L.lang)}: ${activityLabel(a)}${a.notes ? ` (${a.notes})` : ''}`)
   if (partnerSets.length) {
     const theirs = byExercise(partnerSets)
-    const pv = volume(partnerSets)
+    const pv = volume(partnerSets, exercisesById)
     lines.push(`— ${L.partner ?? 'Partner'} —`)
     lines.push([`${partnerSets.length} ${L.sets}`, `${theirs.length} ${L.exercises}`, pv ? `${Math.round(pv)} kg ${L.volume}` : null].filter(Boolean).join(' · '))
     for (const [id, list] of theirs) lines.push(`${nameById(exercisesById, id, L.lang)}: ${list.map(setLabel).join(', ')}`)

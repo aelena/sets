@@ -373,10 +373,7 @@ export const CURATE_5 = {
     { id: 'diverging-seated-row', from: 'Diverging seated row',
       set: { names: { es: 'Remo sentado divergente' }, desc: both('Iso-lateral row machine: chest on the pad, pull both handles back and out, squeeze.', 'Máquina de remo iso-lateral: pecho en el apoyo, tira de los dos agarres atrás y hacia fuera, aprieta.'), link: yt('iso lateral row machine proper form') } },
   ],
-  merges: [
-    { from: 'seated-row', fromName: 'Seated row', into: 'remo-sentado' },
-    { from: 'diverging-seated-row', fromName: 'Diverging seated row', into: 'remo-sentado-divergente' },
-  ],
+  // (0.16.0: the merges of the two seated rows were dropped; the user says they are different machines)
 }
 
 /**
@@ -393,3 +390,48 @@ export const CURATE_6 = {
         link: yt('reverse curl to overhead press barbell') } },
   ],
 }
+
+/**
+ * curate-7 (0.16.0): the user's answers. Lifts per rep for the compound moves; the one-arm cable
+ * fly is per side; the curl that ends with the arm straight up, the curl that turns to a hammer
+ * grip halfway down; the narrow-bar pulldown named; the two seated rows kept apart (un-archived
+ * where curate-5 had folded them, re-added to the Back group by back-rows-1).
+ */
+export const CURATE_7 = {
+  id: 'curate-7', kind: 'curate',
+  exercises: [
+    { id: '3-phase-supercurl', from: '3-phase supercurl', set: { lifts: 3 } },
+    { id: 'arm-superseries', from: 'Arm superseries', set: { lifts: 3 } },
+    { id: 'disc-routine', from: 'Disc routine', set: { lifts: 10 } },
+    { id: 'polea-abajo-arriba-un-solo-lado', from: 'One-arm Low-to-High Cable Fly', set: { perSide: true } },
+    { id: 'curl-with-shoulder-rise', from: 'Curl with shoulder rise',
+      set: { name: 'Curl and Overhead Raise', names: { es: 'Curl y elevación vertical' }, muscles: ['biceps', 'shoulders'],
+        desc: `${both('Dumbbell curl, then keep going: raise the arm straight up towards the ceiling until it is vertical; lower the same way.', 'Curl con mancuerna y sigue subiendo: eleva el brazo en vertical hacia el techo hasta estirarlo; baja igual.')}\nCurl with shoulder rise`,
+        link: yt('dumbbell curl to overhead raise') } },
+    { id: 'curl-with-wrist-twist', from: 'Curl with wrist twist',
+      set: { names: { es: 'Curl con giro a martillo' },
+        desc: both('Curl up with the palm up; halfway down turn the hand to a hammer grip (thumb up) and finish lowering that way.', 'Sube con la palma arriba; a mitad de la bajada gira la mano a agarre martillo (pulgar arriba) y termina de bajar así.'),
+        link: yt('dumbbell curl twist to hammer grip') } },
+    { id: 'barra-estrecha-curl-reverso', from: 'Barra estrecha curl reverso',
+      set: { name: 'Straight-arm Pulldown (narrow bar)', names: { es: 'Jalón con brazos rectos (barra estrecha)' }, muscles: ['back', 'core'],
+        desc: `${both('Knees bent about 40°, grab the high narrow bar overhead with straight arms and sweep it in an arc down to the lower thighs, just above the knees; back up under control.', 'Rodillas flexionadas unos 40°, agarra la barra estrecha alta con los brazos estirados y bájala en arco hasta la parte baja de los muslos, justo sobre las rodillas; vuelve controlado.')}\nBarra estrecha curl reverso · Barra estrecha a rodillas`,
+        link: yt('straight arm pulldown proper form') } },
+    { id: 'seated-row', from: 'Seated row', set: { archived: false } },
+    { id: 'diverging-seated-row', from: 'Diverging seated row', set: { archived: false } },
+  ],
+}
+
+/** The two hand-typed rows back in the user's Back group where curate-5 had folded them (no-op elsewhere). */
+export const BACK_ROWS = { name: 'Back', exercises: ['Seated row', 'Diverging seated row'] }
+
+export const BICEPS_3 = [
+  ex('Zottman Curl', 'Curl Zottman', reps(10, { kg: 10 }), ['biceps', 'forearms'],
+    'Curl up with the palms up, turn the hands over at the top and lower with the palms down; slow on the way down.',
+    'Sube con las palmas arriba, gira las manos arriba y baja con las palmas hacia abajo; despacio al bajar.'),
+]
+export const SHOULDERS_3 = [
+  ex('Divergent Shoulder Press', 'Press de hombros divergente', reps(10, { kg: 32 }), ['shoulders', 'triceps'],
+    'Iso-lateral press machine: the handles travel up and out; press to full extension without the shoulders rising, lower slowly.',
+    'Máquina de press iso-lateral: los agarres suben y se abren; empuja hasta estirar sin subir los hombros y baja despacio.',
+    'divergent shoulder press machine'),
+]

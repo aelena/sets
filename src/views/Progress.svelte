@@ -37,7 +37,7 @@
   const mine = $derived(ex?.exercise ? ($sets ?? []).filter(s => s.exerciseId === ex.exercise.id) : ($logs ?? []).filter(l => l.activityId === ex?.activity?.id))
   const options = $derived(ex?.exercise ? metricsFor(ex.exercise, mine) : mine.some(l => l.km) ? ['minutes', 'km', 'pace'] : ['minutes'])
   const m = $derived(options.includes(metric) ? metric : options[0])
-  const days = $derived(ex?.exercise ? daily(mine) : dailyActivity(mine))
+  const days = $derived(ex?.exercise ? daily(mine, ex.exercise) : dailyActivity(mine))
   const midnight = d => { const [y, mo, da] = d.split('-').map(Number); return new Date(y, mo - 1, da).getTime() }
   const points = $derived(days.filter(d => d[m] != null).map(d => ({ x: midnight(d.date), y: d[m] })))
   const unit = { volume: ' kg', maxKg: ' kg', seconds: 's', reps: '', sets: '', minutes: ' min', km: ' km' }

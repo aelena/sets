@@ -76,6 +76,7 @@ const en = {
   partner: 'Partner', me: 'Me', partnerMode: 'Train with a partner', partnerName: "Partner's name", partnerKg: "Partner's body weight (kg)",
   partnerHint: 'Each set is logged for one of you: pick who on the Train screen. Session time and rests are shared. The recap makes one image each.',
   whoLogs: 'Who is logging', shareBoth: 'Share both images', forWho: 'for {name}',
+  lifts: 'Lifts per rep', liftsShort: '×{n} lifts', liftsHint: 'For compound moves: how many times one rep lifts the weight (a 3-phase curl: 3, a superseries: its moves). The kg totals count it. Empty = 1.',
 }
 
 const es = {
@@ -153,6 +154,7 @@ const es = {
   partner: 'Pareja', me: 'Yo', partnerMode: 'Entrenar en pareja', partnerName: 'Nombre de tu pareja', partnerKg: 'Peso corporal de tu pareja (kg)',
   partnerHint: 'Cada serie se anota para uno de los dos: elige quién en Entrenar. El tiempo de sesión y los descansos son comunes. El resumen en imagen hace una por persona.',
   whoLogs: 'Quién anota', shareBoth: 'Compartir las dos imágenes', forWho: 'para {name}',
+  lifts: 'Levantamientos por rep', liftsShort: '×{n} lev.', liftsHint: 'Para movimientos compuestos: cuántas veces levanta el peso una repetición (un curl en 3 fases: 3, una superserie: sus movimientos). Cuenta en los totales de kg. Vacío = 1.',
 }
 
 export const dictionaries = { en, es }

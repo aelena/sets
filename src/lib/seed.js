@@ -3,7 +3,7 @@ import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './
 import { CURATE_3 } from './catalog3.js'
 import { REVIEW, PUSHUP_SUPERSERIES, CURATE_4 } from './catalog4.js'
 import { BURPEES, CORE_2 } from './catalog5.js'
-import { KEGELS_MEN_2, KEGELS_WOMEN_2, MILITARY, BODYWEIGHT, TRICEPS_3, CORE_3, CURATE_5, CURATE_6 } from './catalog6.js'
+import { KEGELS_MEN_2, KEGELS_WOMEN_2, MILITARY, BODYWEIGHT, TRICEPS_3, CORE_3, CURATE_5, CURATE_6, CURATE_7, BACK_ROWS, BICEPS_3, SHOULDERS_3 } from './catalog6.js'
 
 /** Every target has at least this many sets (user, 2026-11-04: "fix all of them to 4 sets by default"). */
 export const MIN_SETS = 4
@@ -275,6 +275,11 @@ export const PACKS = [
   { id: 'sets-4-1', kind: 'minSets', min: MIN_SETS },
   // 0.15.1: the curl-and-press, named after the user explained it
   CURATE_6,
+  // 0.16.0: lifts per rep on the compound moves and the rest of the user's answers; Zottman curl; divergent press
+  CURATE_7,
+  { id: 'back-rows-1', label: 'classic', appendTo: 'nuevo-grupo', appendOnly: true, groups: [BACK_ROWS] },
+  { id: 'biceps-3', label: 'classic', appendTo: 'biceps', appendOnly: true, groups: [{ name: 'Biceps', exercises: BICEPS_3 }] },
+  { id: 'shoulders-3', label: 'classic', appendTo: 'shoulders', appendOnly: true, groups: [{ name: 'Shoulders', exercises: SHOULDERS_3 }] },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

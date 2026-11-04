@@ -10,7 +10,7 @@
   let { exercise = null, onsave, oncancel, ondelete = null } = $props()
   // the form edits a copy; nothing is written until Save
   let f = $state(untrack(() => ({ name: '', type: 'reps', sets: MIN_SETS, reps: 10, seconds: 30, desc: '', link: '', ...exercise,
-    kg: exercise?.kg ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])], nameEs: exercise?.names?.es ?? '' })))
+    kg: exercise?.kg ?? '', lifts: exercise?.lifts ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])], nameEs: exercise?.names?.es ?? '' })))
   const inGroups = $derived(exercise ? ($groups ?? []).filter(g => g.exerciseIds.includes(exercise.id)).map(g => nameOf(g, $settings.lang)) : [])
 
   const toggle = m => (f.muscles = f.muscles.includes(m) ? f.muscles.filter(x => x !== m) : [...f.muscles, m])
@@ -19,7 +19,7 @@
     e.preventDefault()
     if (!f.name.trim()) return
     const { nameEs, ...rest } = f
-    onsave({ ...rest, names: { ...exercise?.names, es: nameEs.trim() }, kg: f.kg === '' ? null : f.kg, reps: f.type === 'reps' ? f.reps : null, seconds: f.type === 'time' ? f.seconds : null })
+    onsave({ ...rest, names: { ...exercise?.names, es: nameEs.trim() }, kg: f.kg === '' ? null : f.kg, lifts: f.lifts === '' ? null : f.lifts, reps: f.type === 'reps' ? f.reps : null, seconds: f.type === 'time' ? f.seconds : null })
   }
 </script>
 
@@ -40,6 +40,10 @@
     <label class="grow">{$t('weight')}<input type="number" inputmode="decimal" min="0" step="0.5" bind:value={f.kg} placeholder="—" /></label>
   </div>
   <label class="check"><input type="checkbox" bind:checked={f.perSide} /> {$t('perSide')}</label>
+  {#if f.type === 'reps'}
+    <label>{$t('lifts')}<input type="number" inputmode="numeric" min="1" step="1" bind:value={f.lifts} placeholder="1" /></label>
+    <div class="muted small">{$t('liftsHint')}</div>
+  {/if}
   <div class="stack tight">
     <span class="muted small">{$t('muscles')}</span>
     <div class="chips" role="group" aria-label={$t('muscles')}>

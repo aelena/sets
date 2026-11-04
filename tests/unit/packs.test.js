@@ -88,18 +88,22 @@ describe('applyPacks', () => {
     expect((await repo.db.exercises.get('halos')).sets).toBe(2)
   })
 
-  it('curate-5: renames the hand-made exercises under guard, folds an unused duplicate row, fills only gaps', async () => {
+  it('curate-5 to 7: renames the hand-made exercises under guard, fills only gaps, lifts per rep, rows kept apart', async () => {
     const repo = createRepo(createDb(`packs-${n++}`))
-    await repo.db.meta.put({ key: 'packs', applied: PACKS.map(p => p.id).filter(id => !['curate-5', 'curate-6'].includes(id)) })
+    const mine = ['curate-5', 'curate-6', 'curate-7', 'back-rows-1', 'biceps-3', 'shoulders-3']
+    await repo.db.meta.put({ key: 'packs', applied: PACKS.map(p => p.id).filter(id => !mine.includes(id)) })
     await repo.importConfig({ groups: [{ id: 'nuevo-grupo', name: 'Back', exercises: [
       { id: 'curl-barra-agarre-prono-y-subida-hombros', name: 'Curl barra agarre prono y subida hombros', sets: 3, reps: 8, kg: 25 },
       { id: 'curl-prone-grip', name: 'Curl prone grip', sets: 3, reps: 12, kg: 20, muscles: ['forearms'] },
       { id: 'curl-with-wrist-twist', name: 'Curl with a twist', sets: 3, reps: 12 }, // renamed by the user: left alone
-      { id: 'seated-row', name: 'Seated row', sets: 4, reps: 10, kg: 40 },
+      { id: 'seated-row', name: 'Seated row', sets: 4, reps: 10, kg: 40, archived: true }, // folded by curate-5 on a phone that got it
       { id: 'remo-sentado', name: 'Seated Cable Row', sets: 4, reps: 12, kg: 35 },
       { id: 'abductor', name: 'Abductor', sets: 3, reps: 10, kg: 39, desc: 'mine' },
-    ] }] })
-    expect(await repo.applyPacks()).toEqual(['curate-5', 'curate-6'])
+      { id: '3-phase-supercurl', name: '3-phase supercurl', sets: 3, reps: 5, kg: 16 },
+      { id: 'barra-estrecha-curl-reverso', name: 'Barra estrecha curl reverso', names: { es: 'Barra estrecha a rodillas' }, sets: 3, reps: 15, kg: 40 },
+    ] }, { id: 'biceps', name: 'Biceps', exercises: [] }] })
+    await repo.db.groups.update('nuevo-grupo', { exerciseIds: (await repo.db.groups.get('nuevo-grupo')).exerciseIds.filter(id => id !== 'seated-row') })
+    expect(await repo.applyPacks()).toEqual(mine)
     const ex = Object.fromEntries((await repo.db.exercises.toArray()).map(e => [e.id, e]))
     expect(ex['curl-prone-grip']).toMatchObject({ name: 'Reverse Curl', names: { es: 'Curl inverso' }, kg: 20, sets: 3 })
     // curate-5 read it as a shrug, curate-6 corrects it in the same run; the user's wording stays as the last line
@@ -107,10 +111,15 @@ describe('applyPacks', () => {
     expect(ex['curl-barra-agarre-prono-y-subida-hombros'].desc.split('\n').at(-1)).toBe('Curl barra agarre prono y subida hombros')
     expect(ex['curl-with-wrist-twist']).toMatchObject({ name: 'Curl with a twist' })
     expect(ex['curl-with-wrist-twist'].desc).toBe('')
-    expect(ex['seated-row'].archived).toBe(true)
-    expect((await repo.db.groups.get('nuevo-grupo')).exerciseIds).not.toContain('seated-row')
     expect(ex['abductor'].desc).toBe('mine') // fill never replaces
     expect(ex['abductor'].link).toContain('hip+abduction')
+    // curate-7
+    expect(ex['3-phase-supercurl']).toMatchObject({ lifts: 3, kg: 16, sets: 3 })
+    expect(ex['barra-estrecha-curl-reverso']).toMatchObject({ name: 'Straight-arm Pulldown (narrow bar)', names: { es: 'Jalón con brazos rectos (barra estrecha)' }, kg: 40 })
+    expect(ex['seated-row'].archived).toBe(false)
+    expect((await repo.db.groups.get('nuevo-grupo')).exerciseIds).toContain('seated-row') // back in its group
+    expect((await repo.db.groups.get('biceps')).exerciseIds).toEqual(['zottman-curl'])
+    expect(await repo.db.groups.get('shoulders')).toBeUndefined() // appendOnly: no Shoulders group here, none created
   })
 
   it('phone with hand-made content from v3: only back-1 is added, nothing of the user\'s changes', async () => {

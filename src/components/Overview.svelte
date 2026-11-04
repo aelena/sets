@@ -20,7 +20,7 @@
         : nameOf(grById[key.slice(6)], $settings.lang) || key.slice(6)
   const ago = d => (d === 0 ? $t('todayLower') : d === 1 ? $t('yesterday') : $t('daysAgo', { d }))
 
-  const weeks = $derived(weekly({ sessions, sets, activityLogs: logs }))
+  const weeks = $derived(weekly({ sessions, sets, activityLogs: logs, exercisesById: exById }))
   const perWeek = $derived(weeks.map(w => ({ x: w.start, y: w.sessions })))
   const avgSessions = $derived(average(weeks, 'sessions'))
   const avgDays = $derived(average(weeks, 'days'))
@@ -35,7 +35,7 @@
   const avgVolume = $derived(average(weeks, 'volume'))
   const cardio = $derived(weeks.map(w => ({ x: w.start, y: w.cardioMin, km: w.cardioKm })))
   const rest = $derived(restPerSession(sessions))
-  const allWeeks = $derived(weekly({ sessions, sets, activityLogs: logs, weeks: weeksSinceFirst([...sets, ...logs]) }))
+  const allWeeks = $derived(weekly({ sessions, sets, activityLogs: logs, weeks: weeksSinceFirst([...sets, ...logs]), exercisesById: exById }))
   const streak = $derived(streaks(allWeeks))
   const parts = $derived(timeOfDay([...sets, ...logs]))
   const partsMax = $derived(Math.max(1, ...parts.map(p => p.n)))

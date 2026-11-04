@@ -64,7 +64,7 @@
   const ids = $derived(todayOnly ? todayIds : onActivities ? [] : (group?.exerciseIds ?? []))
   const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || !e.archived)))
   // the kg tally of the current workout: what the ✓ view shows
-  const tally = $derived({ sets: todaySets.length, exercises: todayIds.length, kg: Math.round(volume(todaySets)) })
+  const tally = $derived({ sets: todaySets.length, exercises: todayIds.length, kg: Math.round(volume(todaySets, exById)) })
   const nf = $derived(new Intl.NumberFormat($settings.lang))
   /** In Today mode a new set goes to the group the exercise was last logged from today. */
   const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : group?.id)
@@ -208,7 +208,7 @@
       {#each list as ex (ex.id)}
         {@const h = perExercise[ex.id] ?? empty}
         <li>
-          <ExerciseRow exercise={ex} sets={h.today} last={h.last} bests={h.bests} other={h.other} kg={todayOnly ? volume(h.today) : null}
+          <ExerciseRow exercise={ex} sets={h.today} last={h.last} bests={h.bests} other={h.other} kg={todayOnly ? volume(h.today, exById) : null}
             onlog={() => (logging = { exercise: ex })} onedit={set => (logging = { exercise: ex, set })} />
         </li>
       {/each}

@@ -1,6 +1,6 @@
 import { hhmm, dateKey } from './time.js'
 import { paceOf, formatPace } from './activity.js'
-import { trainingTime, loadOf } from './summary.js'
+import { trainingTime, liftsOf, setVolume } from './summary.js'
 
 /** One row per set, flat, ready for Excel. Set number counts within (day, exercise). */
 export function setRows(sets, { exercises, groups, sessions }) {
@@ -22,7 +22,8 @@ export function setRows(sets, { exercises, groups, sessions }) {
       seconds: s.seconds ?? null,
       kg: s.kg ?? null,
       body_kg: s.bw ?? null,
-      volume_kg: loadOf(s) != null && s.reps != null ? loadOf(s) * s.reps : null,
+      lifts: liftsOf(s, ex[s.exerciseId]),
+      volume_kg: s.reps != null && (s.kg ?? s.bw) != null ? setVolume(s, ex[s.exerciseId]) : null,
       session: se[s.sessionId] ? `${dateKey(se[s.sessionId].start)} ${hhmm(se[s.sessionId].start)}` : '',
       exercise_id: s.exerciseId,
     }

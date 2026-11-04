@@ -40,7 +40,7 @@ describe('repo', () => {
     const closed = await repo.stopSession(L)
     expect(closed.id).toBe(s.id)
     expect(closed.summary).toContain('18:00 → 18:40 · 40m 00s')
-    expect(closed.summary).toContain('3 sets · 2 exercises · 298 kg volume')
+    expect(closed.summary).toContain('3 sets · 2 exercises · 388 kg volume') // the disc routine counts 10 lifts per rep
     expect(closed.summary).toContain('Rest: 1× · 1m 30s total')
     expect(closed.summary).toContain('Halos: 10 @16kg, 8 @16kg')
     expect(await repo.db.rests.count()).toBe(0)
@@ -452,5 +452,32 @@ describe('training with a partner', () => {
     expect(file.partnerSets).toBeUndefined()
     await repo.restore(JSON.parse(JSON.stringify(file)))
     expect(await repo.db.partnerSets.count()).toBe(0)
+  })
+})
+
+describe('lifts per rep on compound moves', async () => {
+  const { volume } = await import('../../src/lib/summary.js')
+  const { weekly } = await import('../../src/lib/overview.js')
+
+  it('a set carries the lifts of the moment; sets from before follow the exercise; every kg total multiplies', async () => {
+    await repo.db.exercises.update('3-phase-supercurl', { lifts: 3 })
+    const ex = Object.fromEntries((await repo.db.exercises.toArray()).map(e => [e.id, e]))
+    await repo.startSession()
+    const old = await repo.logSet({ exerciseId: '3-phase-supercurl', reps: 5, kg: 16 }) // logged without lifts: as before the feature
+    at(T0 + MIN); const now = await repo.logSet({ exerciseId: '3-phase-supercurl', reps: 5, kg: 16, lifts: 3 })
+    at(T0 + 2 * MIN); const plain = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16, lifts: 1 })
+    expect((await repo.db.sets.get(old)).lifts).toBeUndefined()
+    expect((await repo.db.sets.get(now)).lifts).toBe(3)
+    expect((await repo.db.sets.get(plain)).lifts).toBeUndefined()
+    const sets = await repo.db.sets.toArray()
+    expect(volume(sets)).toBe(80 + 240 + 160) // without the library only the stamped set multiplies
+    expect(volume(sets, ex)).toBe(240 + 240 + 160)
+    at(T0 + 10 * MIN)
+    const closed = await repo.stopSession(L)
+    expect(closed.summary).toContain('3 sets · 2 exercises · 640 kg volume')
+    const data = await repo.exportData()
+    expect(setRows(data.sets, data).map(r => [r.lifts, r.volume_kg])).toEqual([[3, 240], [3, 240], [1, 160]])
+    expect(daily(sets.filter(s => s.exerciseId === '3-phase-supercurl'), ex['3-phase-supercurl'])[0].volume).toBe(480)
+    expect(weekly({ sessions: [closed], sets, exercisesById: ex, now: T0 })[11].volume).toBe(640)
   })
 })

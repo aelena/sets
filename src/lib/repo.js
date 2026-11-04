@@ -76,10 +76,11 @@ export const createRepo = (db, clock = () => Date.now()) => {
   /** A bodyweight set (no kg) carries the body weight known at the time, so its volume stays what it was. */
   const stamp = (kg, bw) => (kg == null && bw > 0 ? { bw } : {})
 
-  async function logSet({ exerciseId, groupId = null, reps = null, seconds = null, kg = null, bw = null, by = 'me' }) {
+  /** `lifts`: the exercise's lifts per rep at the time (3 for a 3-phase curl), stamped when above one. */
+  async function logSet({ exerciseId, groupId = null, reps = null, seconds = null, kg = null, bw = null, lifts = null, by = 'me' }) {
     const ts = clock()
     const session = await activeSession()
-    return setsOf(by).add({ ts, date: dateKey(ts), exerciseId, groupId, sessionId: session?.id ?? null, reps, seconds, kg, ...stamp(kg, bw) })
+    return setsOf(by).add({ ts, date: dateKey(ts), exerciseId, groupId, sessionId: session?.id ?? null, reps, seconds, kg, ...stamp(kg, bw), ...(lifts > 1 ? { lifts } : {}) })
   }
 
   /** `bw` in the patch is only kept on a bodyweight set; with kg it is dropped. */

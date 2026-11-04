@@ -47,7 +47,7 @@
       await repo.updateSet(set.id, values(), by)
       notify($t('saved'))
     } else {
-      const id = await repo.logSet({ exerciseId: ex.id, groupId, ...values(), by })
+      const id = await repo.logSet({ exerciseId: ex.id, groupId, ...values(), lifts: ex.lifts ?? null, by })
       notify(`${$t('logged')} · ${nameOf(ex, $settings.lang)} ${index}/${ex.sets}${who ? ` · ${who}` : ''}`, { label: $t('undo'), run: () => repo.deleteSet(id, by) })
     }
     onclose()

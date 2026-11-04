@@ -13,7 +13,7 @@
 
   const target = $derived(
     `${ex.sets} × ${ex.type === 'time' ? `${ex.seconds}s` : ex.reps}${ex.perSide ? ` (${$t('perSide')})` : ''}` +
-    (ex.kg != null ? ` · ${ex.kg} kg` : ` · ${$t('bodyweight')}`))
+    (ex.kg != null ? ` · ${ex.kg} kg` : ` · ${$t('bodyweight')}`) + (ex.lifts > 1 ? ` · ${$t('liftsShort', { n: ex.lifts })}` : ''))
   const done = $derived(sets.length >= ex.sets)
   const bestToday = $derived(sets.some(s => bests.has(s.id)))
   /** "Tue" within the last week, "12 Oct" before that */

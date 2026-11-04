@@ -7,7 +7,8 @@
   import { localDesc } from '../lib/seed.js'
   import { nameOf } from '../lib/names.js'
 
-  let { exercise: ex, sets, last = null, bests = new Set(), onlog, onedit } = $props()
+  /** `kg`: the row's kg so far (shown when given); `other`: the other person's count in partner mode, { name, n }. */
+  let { exercise: ex, sets, last = null, bests = new Set(), kg = null, other = null, onlog, onedit } = $props()
   let open = $state(false)
 
   const target = $derived(
@@ -33,7 +34,11 @@
     {#if last}<span class="last small" data-testid="last">{$t('last')}: {compact(last.sets)} · {when}</span>{/if}
   </button>
   {#if bestToday}<span class="flame" title={$t('best')}><Icon name="flame" size={18} /></span>{/if}
-  <span class="count" class:done data-testid="count">{sets.length}/{ex.sets}</span>
+  <span class="counts">
+    <span class="count" class:done data-testid="count">{sets.length}/{ex.sets}</span>
+    {#if kg != null}<span class="sub" data-testid="row-kg">{new Intl.NumberFormat($settings.lang).format(Math.round(kg))} kg</span>{/if}
+    {#if other}<span class="sub" data-testid="other-count">{other.name} {other.n}/{ex.sets}</span>{/if}
+  </span>
   <button class="icon primary plus" aria-label="{$t('logSet')}: {nameOf(ex, $settings.lang)}" onclick={onlog}><Icon name="plus" /></button>
 </div>
 
@@ -57,8 +62,10 @@
   .title { font-weight: 700; }
   .last { color: var(--muted); }
   .flame { color: var(--flame); display: inline-flex; vertical-align: -2px; margin-left: 2px; }
-  .count { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3ch; text-align: right; }
+  .counts { display: grid; justify-items: end; gap: 1px; min-width: 3ch; }
+  .count { font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; }
   .count.done { color: var(--ok); font-weight: 700; }
+  .sub { font-size: 11px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .more { padding: 0 12px 12px; display: grid; gap: 8px; }
   .desc { margin: 0; white-space: pre-wrap; font-size: 14px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }

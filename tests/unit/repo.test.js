@@ -335,3 +335,122 @@ describe('training time', async () => {
     expect((await repo.db.sessions.get(gym.id)).summary).toBe('edited later')
   })
 })
+
+describe('body weight on bodyweight sets', async () => {
+  const { volume } = await import('../../src/lib/summary.js')
+  const { recapData } = await import('../../src/lib/recap.js')
+
+  it('a bodyweight set carries the body weight of the moment and counts reps x body weight; weighted sets ignore it', async () => {
+    await repo.startSession()
+    const a = await repo.logSet({ exerciseId: 'pull-ups', reps: 8, bw: 80 })
+    const b = await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16, bw: 80 })
+    const c = await repo.logSet({ exerciseId: 'pull-ups', reps: 6 }) // no body weight known: nothing to count
+    expect((await repo.db.sets.get(a)).bw).toBe(80)
+    expect((await repo.db.sets.get(b)).bw).toBeUndefined()
+    expect((await repo.db.sets.get(c)).bw).toBeUndefined()
+    at(T0 + 10 * MIN)
+    const closed = await repo.stopSession(L)
+    expect(closed.summary).toContain('3 sets · 2 exercises · 800 kg volume')
+    expect(closed.summary).toContain('Pull ups: 8, 6')
+    const sets = await repo.db.sets.toArray()
+    expect(volume(sets)).toBe(800)
+    expect(setRows(sets, await repo.exportData()).map(r => [r.kg, r.body_kg, r.volume_kg])).toEqual([[null, 80, 640], [16, null, 160], [null, null, null]])
+    expect(daily(sets.filter(s => s.exerciseId === 'pull-ups'))[0]).toMatchObject({ volume: 640, maxKg: null })
+    const d = recapData({ session: closed, sets, exercisesById: { 'pull-ups': { id: 'pull-ups', name: 'Pull ups' }, halos: { id: 'halos', name: 'Halos' } } })
+    expect(d.volume).toBe(800)
+  })
+
+  it('editing a set keeps the body weight only while it stays a bodyweight set', async () => {
+    const id = await repo.logSet({ exerciseId: 'pull-ups', reps: 8, bw: 80 })
+    await repo.updateSet(id, { reps: 9 })
+    expect(await repo.db.sets.get(id)).toMatchObject({ reps: 9, bw: 80 })
+    await repo.updateSet(id, { reps: 9, kg: 10, bw: 80 }) // weighted now
+    expect((await repo.db.sets.get(id)).bw).toBeUndefined()
+    await repo.updateSet(id, { reps: 9, kg: null, bw: 82 }) // back to bodyweight, at the weight of the day
+    expect((await repo.db.sets.get(id)).bw).toBe(82)
+  })
+})
+
+describe('training with a partner', () => {
+  const P = { ...L, partner: 'Ana' }
+
+  it("logs the partner's sets apart: not in the user's history, in the session summary as a block of their own", async () => {
+    await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 + MIN); await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 8, by: 'partner' })
+    at(T0 + 2 * MIN); await repo.logSet({ exerciseId: 'pull-ups', reps: 5, bw: 60, by: 'partner' })
+    expect(await repo.db.sets.count()).toBe(1)
+    expect(await repo.db.partnerSets.count()).toBe(2)
+    at(T0 + 30 * MIN)
+    const closed = await repo.stopSession(P)
+    expect(closed.partner).toEqual({ name: 'Ana' })
+    expect(closed.summary).toContain('1 sets · 1 exercises · 160 kg volume')
+    expect(closed.summary).toContain('— Ana —\n2 sets · 2 exercises · 396 kg volume\nHalos: 12 @8kg\nPull ups: 5')
+    expect(await repo.partnerSetsOf(closed.id)).toHaveLength(2)
+    const file = await repo.sessionExport(closed.id)
+    expect(file.session.partner).toBe('Ana')
+    expect(file.partnerSets.map(s => s.exercise)).toEqual(['Halos', 'Pull ups'])
+    expect(file.partnerSets[1].bodyKg).toBe(60)
+  })
+
+  it('without partner sets a session has no partner and the summary no block', async () => {
+    await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    const closed = await repo.stopSession(P)
+    expect(closed.partner).toBeUndefined()
+    expect(closed.summary).not.toContain('Ana')
+  })
+
+  it("loose partner sets complete into the day's untimed session with the user's, and bundle into a timed one", async () => {
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 + MIN); await repo.logSet({ exerciseId: 'halos', reps: 8, kg: 8, by: 'partner' })
+    const pending = await repo.pendingAdHoc()
+    expect(pending.partnerSets).toHaveLength(1)
+    const [day] = await repo.completeAdHoc(P)
+    expect(day.untimed).toBe(true)
+    expect(day.partner).toEqual({ name: 'Ana' })
+    expect(day.summary).toContain('— Ana —\n1 sets · 1 exercises · 64 kg volume\nHalos: 8 @8kg')
+    expect((await repo.db.partnerSets.toArray())[0].sessionId).toBe(day.id)
+    // only the partner logs something loose: the day still completes
+    at(T0 + 24 * 60 * MIN + 10 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 8, kg: 8, by: 'partner' })
+    expect((await repo.pendingAdHoc()).days).toEqual(['2026-10-17'])
+    expect(await repo.completeAdHoc(P)).toHaveLength(1)
+
+    // a timed session, then a loose partner set the same day joins it
+    at(T0 + 48 * 60 * MIN); await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 16 })
+    at(T0 + 48 * 60 * MIN + 30 * MIN); const gym = await repo.stopSession(P)
+    at(T0 + 48 * 60 * MIN + 40 * MIN); await repo.logSet({ exerciseId: 'pull-ups', reps: 5, by: 'partner' })
+    expect((await repo.looseOnDayOf(gym.id)).partnerSets).toHaveLength(1)
+    const joined = await repo.bundleLoose(gym.id, P)
+    expect(joined.bundled).toBe(1)
+    expect(joined.summary).toContain('— Ana —\n1 sets · 1 exercises\nPull ups: 5')
+  })
+
+  it("the partner's history keeps an exercise archived on delete, travels in backups, and holds a forgotten session open", async () => {
+    await repo.logSet({ exerciseId: 'upright-row', reps: 10, kg: 8, by: 'partner' })
+    await repo.deleteExercise('upright-row')
+    expect((await repo.db.exercises.get('upright-row')).archived).toBe(true)
+
+    const file = await repo.backup({})
+    expect(file.partnerSets).toHaveLength(1)
+    const other = createRepo(createDb(`test-${n++}`), () => now)
+    await other.restore(JSON.parse(JSON.stringify(file)))
+    expect(await other.db.partnerSets.count()).toBe(1)
+    expect(await other.backup({})).toEqual(file)
+
+    await repo.startSession()
+    at(T0 + 90 * MIN); await repo.logSet({ exerciseId: 'halos', reps: 10, kg: 8, by: 'partner' })
+    at(T0 + 150 * MIN)
+    expect(await repo.autoCloseStale(P)).toBeNull() // the partner's set an hour ago keeps it alive
+    at(T0 + 90 * MIN + IDLE_CLOSE_MS)
+    expect((await repo.autoCloseStale(P)).end).toBe(T0 + 90 * MIN)
+  })
+
+  it('a backup without partner sets restores to an empty partner table', async () => {
+    const file = await repo.backup({})
+    expect(file.partnerSets).toBeUndefined()
+    await repo.restore(JSON.parse(JSON.stringify(file)))
+    expect(await repo.db.partnerSets.count()).toBe(0)
+  })
+})

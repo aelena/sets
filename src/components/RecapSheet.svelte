@@ -3,48 +3,59 @@
   import Sheet from './Sheet.svelte'
   import { db, repo } from '../lib/store.js'
   import { settings, FONTS } from '../lib/settings.js'
-  import { t } from '../lib/i18n.js'
+  import { t, partnerLabel } from '../lib/i18n.js'
   import { recapData, GRADIENTS } from '../lib/recap.js'
   import { drawRecap, toJpeg, loadImage, PHOTOS } from '../lib/recapImage.js'
-  import { deliver } from '../lib/export.js'
-  import { dateKey } from '../lib/time.js'
+  import { deliver, deliverAll } from '../lib/export.js'
+  import { dateKey, slugify } from '../lib/time.js'
 
   let { session, onclose } = $props()
 
-  let data = $state(null)
+  // one recap per person: the user's, and the partner's when they logged sets in this session
+  let datas = $state(null) // { me, partner | null }
+  let who = $state('me')
+  const data = $derived(datas ? datas[who] : null)
+  const partnerName = $derived(session.partner?.name ?? partnerLabel($settings, $t))
+  const myName = $derived($settings.userName?.trim() || $t('me'))
+  const nameFor = w => (w === 'partner' ? partnerName : $settings.userName)
   let picked = $state(null) // { url, img } from the photo library; kept for this sheet only
   let preview = $state('')
   let blob = $state(null)
   let busy = $state(false)
   let title = $state(session.recapTitle ?? '')
   let saveTimer
-  // the title is kept with the session, so the recap can be made again with it
+  // the title is kept with the session, so the recap can be made again with it; both images carry it
   function retitle(v) {
     title = v
-    if (data) data = { ...data, title: v.trim() }
+    if (datas) datas = { me: { ...datas.me, title: v.trim() }, partner: datas.partner && { ...datas.partner, title: v.trim() } }
     clearTimeout(saveTimer)
     saveTimer = setTimeout(() => { saveTimer = null; repo.setRecapTitle(session.id, v) }, 400)
   }
 
-  // load once: this session's sets, plus each exercise's whole history for personal bests
+  // load once: this session's sets, plus each exercise's whole history for personal bests, per person
   onMount(async () => {
     if ($settings.recapBg === 'picked') $settings.recapBg = 'ink' // a picked photo is not kept between openings
     // the session prop may be a snapshot from before a title was saved: read the stored one
     const stored = await db.sessions.get(session.id)
     if (stored?.recapTitle && !title) title = stored.recapTitle
-    const sets = await db.sets.where('sessionId').equals(session.id).toArray()
-    const ids = [...new Set(sets.map(s => s.exerciseId))]
-    const [history, exercises, activityLogs, activities, groups] = await Promise.all([
-      db.sets.where('exerciseId').anyOf(ids).toArray(), db.exercises.bulkGet(ids),
-      db.activityLogs.where('sessionId').equals(session.id).toArray(), db.activities.toArray(),
+    const [sets, theirs] = await Promise.all([db.sets.where('sessionId').equals(session.id).toArray(), repo.partnerSetsOf(session.id)])
+    const ids = [...new Set([...sets, ...theirs].map(s => s.exerciseId))]
+    const [history, theirHistory, exercises, activityLogs, activities, groups] = await Promise.all([
+      db.sets.where('exerciseId').anyOf(ids).toArray(), theirs.length ? db.partnerSets.where('exerciseId').anyOf(ids).toArray() : [],
+      db.exercises.bulkGet(ids), db.activityLogs.where('sessionId').equals(session.id).toArray(), db.activities.toArray(),
       db.groups.toArray(),
     ])
-    data = recapData({
-      session: { ...session, recapTitle: title }, sets, history, activityLogs,
+    const common = {
+      session: { ...session, recapTitle: title },
       groupsById: Object.fromEntries(groups.map(g => [g.id, g])), lang: $settings.lang,
       exercisesById: Object.fromEntries(exercises.filter(Boolean).map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
-    })
+    }
+    datas = {
+      me: recapData({ ...common, sets, history, activityLogs }),
+      // the partner shares the session's time and rests; the activities (a run) are the user's own
+      partner: theirs.length ? recapData({ ...common, sets: theirs, history: theirHistory, activityLogs: [] }) : null,
+    }
   })
 
   const bg = $derived($settings.recapBg)
@@ -56,24 +67,42 @@
     return { gradient: GRADIENTS[choice] ?? GRADIENTS.ink }
   }
 
-  let run = 0
-  $effect(() => {
-    const d = data, format = $settings.recapFormat, detail = $settings.recapDetail, choice = bg, lang = $settings.lang, name = $settings.userName
+  /** The current look (format, detail, background, font, words) applied to one person's data. */
+  async function render(d, userName) {
     const family = FONTS[$settings.font] ?? FONTS['JetBrains Mono']
     const L = { sets: $t('sets'), exercises: $t('exercises'), volume: $t('volume'), rests: $t('rests'), bests: $t('bests'), bestOne: `1 ${$t('bestOne')}`, more: n => $t('moreExercises', { n }), pitch: $t('pitch'), untimedSession: $t('untimedSession'), gym: $t('gymPart'),
       muscle: k => (k.startsWith('mu:') ? $t(`mu_${k.slice(3)}`) : k.slice(6)) }
-    picked // re-render when a new photo is picked
+    const canvas = await drawRecap(d, { format: $settings.recapFormat, detail: $settings.recapDetail, background: await background(bg), family, lang: $settings.lang, userName, L })
+    return toJpeg(canvas)
+  }
+
+  let run = 0
+  $effect(() => {
+    const d = data, name = nameFor(who)
+    // read here so the preview follows every change of look
+    void [$settings.recapFormat, $settings.recapDetail, bg, $settings.lang, $settings.font, $t, picked]
     if (!d) return
     const mine = ++run
     ;(async () => {
-      const canvas = await drawRecap(d, { format, detail, background: await background(choice), family, lang, userName: name, L })
-      const b = await toJpeg(canvas)
+      const b = await render(d, name)
       if (mine !== run) return
       if (preview) URL.revokeObjectURL(preview)
       blob = b
       preview = URL.createObjectURL(b)
     })()
   })
+
+  const fileName = w => `sets-recap-${dateKey(session.start)}${w === 'partner' ? `-${slugify(partnerName) || 'partner'}` : ''}.jpg`
+
+  /** Both images in one share sheet: the one on screen as it is, the other rendered the same way. */
+  async function shareBoth() {
+    busy = true
+    try {
+      const other = who === 'partner' ? 'me' : 'partner'
+      const pair = [[blob, fileName(who)], [await render(datas[other], nameFor(other)), fileName(other)]]
+      await deliverAll(who === 'partner' ? pair.reverse() : pair)
+    } finally { busy = false }
+  }
 
   async function pick(e) {
     const file = e.currentTarget.files[0]
@@ -87,7 +116,7 @@
 
   async function share() {
     busy = true
-    try { await deliver(blob, `sets-recap-${dateKey(session.start)}.jpg`) } finally { busy = false }
+    try { await deliver(blob, fileName(who)) } finally { busy = false }
   }
 
   onDestroy(() => {
@@ -99,6 +128,12 @@
 
 <Sheet title={$t('recap')} {onclose}>
   <div class="stack">
+    {#if datas?.partner}
+      <div class="segmented" role="group" aria-label={$t('whoLogs')} data-testid="recap-who">
+        <button aria-pressed={who === 'me'} onclick={() => (who = 'me')}>{myName}</button>
+        <button aria-pressed={who === 'partner'} onclick={() => (who = 'partner')}>{partnerName}</button>
+      </div>
+    {/if}
     <div class="segmented">
       <button aria-pressed={$settings.recapFormat === 'story'} onclick={() => ($settings.recapFormat = 'story')}>{$t('story')}</button>
       <button aria-pressed={$settings.recapFormat === 'post'} onclick={() => ($settings.recapFormat = 'post')}>{$t('post')}</button>
@@ -135,6 +170,7 @@
     </div>
 
     <button class="primary" disabled={!blob || busy} onclick={share}>{$t('share')}</button>
+    {#if datas?.partner}<button disabled={!blob || busy} onclick={shareBoth}>{$t('shareBoth')}</button>{/if}
   </div>
 </Sheet>
 

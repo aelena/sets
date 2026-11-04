@@ -68,15 +68,27 @@ export const createRepo = (db, clock = () => Date.now()) => {
   }
   const seedIfEmpty = async () => (await applyPacks()).includes('base-1')
 
-  async function logSet({ exerciseId, groupId = null, reps = null, seconds = null, kg = null }) {
+  /** Whose sets: the user's (`by` empty or 'me') or the training partner's ('partner'), each in their own table. */
+  const setsOf = by => (by === 'partner' ? db.partnerSets : db.sets)
+  /** A bodyweight set (no kg) carries the body weight known at the time, so its volume stays what it was. */
+  const stamp = (kg, bw) => (kg == null && bw > 0 ? { bw } : {})
+
+  async function logSet({ exerciseId, groupId = null, reps = null, seconds = null, kg = null, bw = null, by = 'me' }) {
     const ts = clock()
     const session = await activeSession()
-    return db.sets.add({ ts, date: dateKey(ts), exerciseId, groupId, sessionId: session?.id ?? null, reps, seconds, kg })
+    return setsOf(by).add({ ts, date: dateKey(ts), exerciseId, groupId, sessionId: session?.id ?? null, reps, seconds, kg, ...stamp(kg, bw) })
   }
 
-  const updateSet = (id, patch) => db.sets.update(id, patch)
-  const deleteSet = id => db.sets.delete(id)
-  const restoreSet = row => db.sets.put(row)
+  /** `bw` in the patch is only kept on a bodyweight set; with kg it is dropped. */
+  const updateSet = (id, { bw, ...patch }, by = 'me') => setsOf(by).update(id, 'kg' in patch ? { ...patch, bw: stamp(patch.kg, bw).bw } : patch)
+  const deleteSet = (id, by = 'me') => setsOf(by).delete(id)
+  const restoreSet = (row, by = 'me') => setsOf(by).put(row)
+
+  /** The partner's sets of one session, oldest first. */
+  const partnerSetsOf = sessionId => db.partnerSets.where('sessionId').equals(sessionId).sortBy('ts')
+
+  /** A session with partner sets keeps the partner's name of the time, for its recap and summary later on. */
+  const partnerOf = (partnerSets, L) => (partnerSets.length ? { partner: { name: L.partner ?? 'Partner' } } : {})
 
   async function startSession() {
     const open = await activeSession()
@@ -91,18 +103,19 @@ export const createRepo = (db, clock = () => Date.now()) => {
     if (!session) return null
     const rest = await activeRest()
     if (rest && !rest.end) await db.rests.update(rest.id, { end: Math.min(end, clock()) })
-    const [sets, rests, exercises, activityLogs, activities] = await Promise.all([
+    const [sets, rests, exercises, activityLogs, activities, partnerSets] = await Promise.all([
       db.sets.where('sessionId').equals(session.id).toArray(),
       db.rests.where('sessionId').equals(session.id).toArray(),
       db.exercises.toArray(),
       db.activityLogs.where('sessionId').equals(session.id).toArray(),
       db.activities.toArray(),
+      partnerSetsOf(session.id),
     ])
     const done = rests.filter(r => r.end)
     // rests are dropped below; their count and time survive here for the recap image
-    const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0), restLongest: Math.max(0, ...done.map(r => r.end - r.start)) } }
+    const closed = { ...session, end, auto, stats: { rests: done.length, restMs: done.reduce((a, r) => a + r.end - r.start, 0), restLongest: Math.max(0, ...done.map(r => r.end - r.start)) }, ...partnerOf(partnerSets, L) }
     closed.summary = buildSummary({
-      session: closed, sets, rests, L, activityLogs,
+      session: closed, sets, rests, L, activityLogs, partnerSets,
       exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
     })
@@ -116,8 +129,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
   /** Sets, activities and notes logged outside any session: what "Complete" files into its day's untimed session. */
   async function pendingAdHoc() {
     const loose = t => t.filter(r => !r.sessionId).toArray()
-    const [sets, activityLogs, notes] = await Promise.all([loose(db.sets), loose(db.activityLogs), loose(db.notes)])
-    return { sets, activityLogs, notes, days: [...new Set([...sets, ...activityLogs].map(r => r.date))].sort() }
+    const [sets, activityLogs, notes, partnerSets] = await Promise.all([loose(db.sets), loose(db.activityLogs), loose(db.notes), loose(db.partnerSets)])
+    return { sets, activityLogs, notes, partnerSets, days: [...new Set([...sets, ...activityLogs, ...partnerSets].map(r => r.date))].sort() }
   }
 
   /**
@@ -128,14 +141,14 @@ export const createRepo = (db, clock = () => Date.now()) => {
    */
   async function completeAdHoc(L, { before } = {}) {
     const pending = await pendingAdHoc()
-    const { sets, activityLogs, notes } = pending
+    const { sets, activityLogs, notes, partnerSets } = pending
     const days = before ? pending.days.filter(d => d < before) : pending.days
     if (!days.length) return []
     const [exercises, activities, sessions] = await Promise.all([db.exercises.toArray(), db.activities.toArray(), db.sessions.toArray()])
     const exercisesById = Object.fromEntries(exercises.map(e => [e.id, e]))
     const activitiesById = Object.fromEntries(activities.map(a => [a.id, a]))
     const touched = []
-    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, async () => {
+    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, db.partnerSets, async () => {
       for (const day of days) {
         let session = sessions.find(x => x.untimed && dateKey(x.start) === day)
         if (!session) {
@@ -146,12 +159,14 @@ export const createRepo = (db, clock = () => Date.now()) => {
         await link(db.sets, sets)
         await link(db.activityLogs, activityLogs)
         await link(db.notes, notes)
-        const [mySets, myLogs] = await Promise.all([
+        await link(db.partnerSets, partnerSets)
+        const [mySets, myLogs, theirSets] = await Promise.all([
           db.sets.where('sessionId').equals(session.id).toArray(), db.activityLogs.where('sessionId').equals(session.id).toArray(),
+          partnerSetsOf(session.id),
         ])
-        const ts = [...mySets, ...myLogs].map(r => r.ts)
-        const updated = { ...session, start: Math.min(...ts), end: Math.max(...ts) }
-        updated.summary = buildSummary({ session: updated, sets: mySets, rests: [], L, activityLogs: myLogs, exercisesById, activitiesById })
+        const ts = [...mySets, ...myLogs, ...theirSets].map(r => r.ts)
+        const updated = { ...session, start: Math.min(...ts), end: Math.max(...ts), ...partnerOf(theirSets, L) }
+        updated.summary = buildSummary({ session: updated, sets: mySets, rests: [], L, activityLogs: myLogs, exercisesById, activitiesById, partnerSets: theirSets })
         await db.sessions.put(updated)
         touched.push(updated)
       }
@@ -196,11 +211,11 @@ export const createRepo = (db, clock = () => Date.now()) => {
   /** Loose rows (outside any session) of the same day as a session: what could be bundled into it. */
   async function looseOnDayOf(id) {
     const session = await db.sessions.get(id)
-    if (!session) return { sets: [], activityLogs: [], notes: [] }
+    if (!session) return { sets: [], activityLogs: [], notes: [], partnerSets: [] }
     const day = dateKey(session.start)
-    const { sets, activityLogs, notes } = await pendingAdHoc()
+    const { sets, activityLogs, notes, partnerSets } = await pendingAdHoc()
     const same = r => r.date === day
-    return { sets: sets.filter(same), activityLogs: activityLogs.filter(same), notes: notes.filter(same) }
+    return { sets: sets.filter(same), activityLogs: activityLogs.filter(same), notes: notes.filter(same), partnerSets: partnerSets.filter(same) }
   }
 
   /**
@@ -211,18 +226,18 @@ export const createRepo = (db, clock = () => Date.now()) => {
     const session = await db.sessions.get(id)
     if (!session?.end || session.untimed) return null
     const loose = await looseOnDayOf(id)
-    if (!loose.sets.length && !loose.activityLogs.length && !loose.notes.length) return session
-    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, async () => {
-      for (const [t, rows] of [[db.sets, loose.sets], [db.activityLogs, loose.activityLogs], [db.notes, loose.notes]])
+    if (!loose.sets.length && !loose.activityLogs.length && !loose.notes.length && !loose.partnerSets.length) return session
+    await db.transaction('rw', db.sessions, db.sets, db.activityLogs, db.notes, db.partnerSets, async () => {
+      for (const [t, rows] of [[db.sets, loose.sets], [db.activityLogs, loose.activityLogs], [db.notes, loose.notes], [db.partnerSets, loose.partnerSets]])
         await Promise.all(rows.map(r => t.update(r.id, { sessionId: id })))
     })
-    const [sets, activityLogs, exercises, activities] = await Promise.all([
+    const [sets, activityLogs, exercises, activities, partnerSets] = await Promise.all([
       db.sets.where('sessionId').equals(id).toArray(), db.activityLogs.where('sessionId').equals(id).toArray(),
-      db.exercises.toArray(), db.activities.toArray(),
+      db.exercises.toArray(), db.activities.toArray(), partnerSetsOf(id),
     ])
-    const updated = { ...session, bundled: (session.bundled ?? 0) + loose.sets.length + loose.activityLogs.length }
+    const updated = { ...session, bundled: (session.bundled ?? 0) + loose.sets.length + loose.activityLogs.length + loose.partnerSets.length, ...partnerOf(partnerSets, L) }
     updated.summary = buildSummary({
-      session: updated, sets, rests: [], L, activityLogs,
+      session: updated, sets, rests: [], L, activityLogs, partnerSets,
       exercisesById: Object.fromEntries(exercises.map(e => [e.id, e])),
       activitiesById: Object.fromEntries(activities.map(a => [a.id, a])),
     })
@@ -237,7 +252,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
     const lastSet = await db.sets.where('sessionId').equals(session.id).reverse().sortBy('ts').then(a => a[0])
     const lastRest = await activeRest()
     const lastActivity = await db.activityLogs.where('sessionId').equals(session.id).reverse().sortBy('ts').then(a => a[0])
-    const last = Math.max(session.start, lastSet?.ts ?? 0, lastActivity?.ts ?? 0, lastRest?.end ?? lastRest?.start ?? 0)
+    const lastPartner = await db.partnerSets.where('sessionId').equals(session.id).reverse().sortBy('ts').then(a => a[0])
+    const last = Math.max(session.start, lastSet?.ts ?? 0, lastActivity?.ts ?? 0, lastPartner?.ts ?? 0, lastRest?.end ?? lastRest?.start ?? 0)
     if (clock() - last < idle) return null
     return stopSession(L, { end: last, auto: true })
   }
@@ -318,8 +334,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   /** Exercises with history are archived so old sets keep their name; unused ones go. */
   async function deleteExercise(id) {
-    await db.transaction('rw', db.exercises, db.groups, db.sets, async () => {
-      const used = await db.sets.where('exerciseId').equals(id).count()
+    await db.transaction('rw', db.exercises, db.groups, db.sets, db.partnerSets, async () => {
+      const used = (await db.sets.where('exerciseId').equals(id).count()) + (await db.partnerSets.where('exerciseId').equals(id).count())
       if (used) await db.exercises.update(id, { archived: true })
       else await db.exercises.delete(id)
       await db.groups.toCollection().modify(g => { g.exerciseIds = g.exerciseIds.filter(x => x !== id) })
@@ -360,11 +376,11 @@ export const createRepo = (db, clock = () => Date.now()) => {
   const configFile = async () => exportConfig(await library())
 
   const everything = async () => {
-    const [lib, sets, sessions, notes, activities, activityLogs] = await Promise.all([
-      library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray(), db.activities.toArray(), db.activityLogs.toArray(),
+    const [lib, sets, sessions, notes, activities, activityLogs, partnerSets] = await Promise.all([
+      library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray(), db.activities.toArray(), db.activityLogs.toArray(), db.partnerSets.toArray(),
     ])
     const packs = (await db.meta.get('packs'))?.applied ?? []
-    return { ...lib, sets, sessions, notes, activities, activityLogs, packs }
+    return { ...lib, sets, sessions, notes, activities, activityLogs, packs, ...(partnerSets.length ? { partnerSets } : {}) }
   }
 
   async function backup(settings = {}) {
@@ -373,12 +389,13 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   async function restore(json) {
     if (json?.format !== BACKUP_FORMAT) throw new Error('Not a full backup file')
-    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs, db.meta]
+    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs, db.meta, db.partnerSets]
     await db.transaction('rw', tables, async () => {
       await Promise.all(tables.map(t => t.clear()))
       await db.exercises.bulkPut(json.exercises ?? [])
       await db.groups.bulkPut(json.groups ?? [])
       await db.sets.bulkPut(json.sets ?? [])
+      await db.partnerSets.bulkPut(json.partnerSets ?? [])
       await db.sessions.bulkPut(json.sessions ?? [])
       await db.notes.bulkPut(json.notes ?? [])
       // v1 backups predate activities: keep the defaults rather than an empty list
@@ -397,12 +414,15 @@ export const createRepo = (db, clock = () => Date.now()) => {
   async function sessionExport(id) {
     const session = await db.sessions.get(id)
     if (!session) return null
-    const [sets, activityLogs, notes, exercises, activities, groups] = await Promise.all([
+    const [sets, activityLogs, notes, exercises, activities, groups, partnerSets] = await Promise.all([
       db.sets.where('sessionId').equals(id).sortBy('ts'), db.activityLogs.where('sessionId').equals(id).sortBy('ts'),
       db.notes.where('sessionId').equals(id).sortBy('ts'), db.exercises.toArray(), db.activities.toArray(), db.groups.toArray(),
+      partnerSetsOf(id),
     ])
     const name = (list, key) => Object.fromEntries(list.map(x => [x.id, x.name]))[key] ?? key
     const iso = ts => new Date(ts).toISOString()
+    const setOut = s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
+      group: s.groupId ? name(groups, s.groupId) : null, reps: s.reps, seconds: s.seconds, kg: s.kg, ...(s.bw != null ? { bodyKg: s.bw } : {}) })
     return {
       format: 'sets/session', version: 1, exportedAt: iso(clock()),
       session: {
@@ -410,16 +430,17 @@ export const createRepo = (db, clock = () => Date.now()) => {
         minutes: session.end && !session.untimed ? Math.round((session.end - session.start) / 60000) : null, untimed: !!session.untimed,
         trainingMinutes: session.end && !session.untimed ? Math.round(trainingTime(session, activityLogs).ms / 60000) : null,
         auto: !!session.auto, stats: session.stats ?? null, summary: session.summary, title: session.recapTitle ?? '',
+        ...(session.partner ? { partner: session.partner.name } : {}),
       },
-      sets: sets.map(s => ({ time: iso(s.ts), exerciseId: s.exerciseId, exercise: name(exercises, s.exerciseId),
-        group: s.groupId ? name(groups, s.groupId) : null, reps: s.reps, seconds: s.seconds, kg: s.kg })),
+      sets: sets.map(setOut),
+      ...(partnerSets.length ? { partnerSets: partnerSets.map(setOut) } : {}),
       activities: activityLogs.map(l => ({ time: iso(l.ts), activity: name(activities, l.activityId), minutes: l.minutes, km: l.km, notes: l.notes })),
       notes: notes.map(n => ({ time: iso(n.ts), text: n.text })),
     }
   }
 
   return {
-    db, library, seedIfEmpty, applyPacks, logSet, updateSet, deleteSet, restoreSet,
+    db, library, seedIfEmpty, applyPacks, logSet, updateSet, deleteSet, restoreSet, partnerSetsOf,
     activeSession, startSession, stopSession, autoCloseStale,
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,

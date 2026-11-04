@@ -7,13 +7,17 @@
   import { settings } from '../lib/settings.js'
   import { nameOf } from '../lib/names.js'
 
-  /** `set` given: edit that logged set. Otherwise log a new one, prefilled from the last set today or the target. */
-  let { exercise: ex, set = null, groupId, done, onclose } = $props()
+  /**
+   * `set` given: edit that logged set. Otherwise log a new one, prefilled from the last set today,
+   * then (`last`) the person's most recent set of this exercise, then the target.
+   * `by`: whose set ('me' | 'partner'); `who`: that person's name for the sheet; `bw`: their body weight, stamped on bodyweight sets.
+   */
+  let { exercise: ex, set = null, groupId, done, last = null, by = 'me', who = '', bw = null, onclose } = $props()
 
   // the sheet is mounted per tap, so it works on a snapshot of what was on screen at that moment
   const { timed, index, initial } = untrack(() => {
     const timed = ex.type === 'time'
-    const source = set ?? done.at(-1)
+    const source = set ?? done.at(-1) ?? last
     return {
       timed,
       index: set ? done.findIndex(s => s.id === set.id) + 1 : done.length + 1,
@@ -34,30 +38,31 @@
     reps: timed ? null : +amount || 0,
     seconds: timed ? +amount || 0 : null,
     kg: kg === '' || kg == null ? null : +kg,
+    bw,
   })
 
   async function submit(e) {
     e.preventDefault()
     if (set) {
-      await repo.updateSet(set.id, values())
+      await repo.updateSet(set.id, values(), by)
       notify($t('saved'))
     } else {
-      const id = await repo.logSet({ exerciseId: ex.id, groupId, ...values() })
-      notify(`${$t('logged')} · ${nameOf(ex, $settings.lang)} ${index}/${ex.sets}`, { label: $t('undo'), run: () => repo.deleteSet(id) })
+      const id = await repo.logSet({ exerciseId: ex.id, groupId, ...values(), by })
+      notify(`${$t('logged')} · ${nameOf(ex, $settings.lang)} ${index}/${ex.sets}${who ? ` · ${who}` : ''}`, { label: $t('undo'), run: () => repo.deleteSet(id, by) })
     }
     onclose()
   }
 
   async function remove() {
-    await repo.deleteSet(set.id)
-    notify($t('deleted'), { label: $t('undo'), run: () => repo.restoreSet(set) })
+    await repo.deleteSet(set.id, by)
+    notify($t('deleted'), { label: $t('undo'), run: () => repo.restoreSet(set, by) })
     onclose()
   }
 </script>
 
 <Sheet title={nameOf(ex, $settings.lang)} {onclose}>
   <form onsubmit={submit} class="stack">
-    <div class="muted">{$t('set')} {index} {$t('of')} {ex.sets}{ex.perSide ? ` · ${$t('perSide')}` : ''}</div>
+    <div class="muted" data-testid="log-who">{$t('set')} {index} {$t('of')} {ex.sets}{ex.perSide ? ` · ${$t('perSide')}` : ''}{who ? ` · ${who}` : ''}</div>
     <div class="field">
       <span class="muted">{timed ? $t('seconds') : $t('reps')}</span>
       <div class="row">

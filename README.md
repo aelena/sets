@@ -30,7 +30,14 @@ Updates arrive on their own: open the app, and if nothing changed, close it and 
 - **Counters** (`2/5`, green when reached) show the **workout in progress**: the running timed session, or the loose sets not completed yet. They go back to 0 when a workout is finished.
 - **Last time:** under each exercise, `last: 2×10 · 9 @16kg · Wed` (or `· today`), the sets of the most recent finished workout.
 - **Personal bests:** a small flame marks a set no earlier set matched on both weight and reps (or seconds). Per exercise, from its 12th training day: before that nearly every set would be a best.
-- **Current workout view:** the ✓ in the top bar lists everything in the current workout from any group in one list, for days that mix groups.
+- **Current workout view:** the ✓ in the top bar lists everything in the current workout from any group in one list, for days that mix groups, with the **kg tally** so far: per exercise on each row, and `4 sets · 2 exercises · 960 kg` at the top.
+- **Body weight:** set yours in **Settings → Body weight (kg)** and bodyweight sets (pull-ups, push-ups, dips: kg left empty) count reps × body weight in every kg total: the tally, the summary, the recap image, weekly volume, the volume chart and the Excel export. The body weight of the day is kept on each set, so an old session does not change when you do. Sets logged before a body weight was set stay out of the totals; max kg charts only count weight added.
+
+### Training with a partner
+
+- **Settings → Partner → Train with a partner**, with their name and body weight. The Train screen then shows a switch with the two names: every set is logged for whoever is selected, and the counters, chips, *last* and personal bests are that person's (the other one's count shows small under it, `Ana 1/3`). The partner's next set is prefilled from their own last set.
+- The session, its time and rests are shared. On ■ or Complete the summary gets a block for the partner (`— Ana —`, their sets, exercises and kg), and **Share image** offers one recap per person, with **Share both images** sending the two through one share sheet.
+- The partner's sets live in a table of their own: nothing in your history, charts, bests or Overview ever counts them. They do travel in backups and session exports, and get their own sheet in the Excel export.
 
 ### Sessions, timed or not
 
@@ -64,7 +71,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 
 ## Sharing and exporting
 
-- **Session summary:** after ■ or Complete, stored as plain text: time or day, sets, exercises, activities, volume, rests and every exercise's sets.
+- **Session summary:** after ■ or Complete, stored as plain text: time or day, sets, exercises, activities, volume, rests and every exercise's sets; then the partner's block when training with one.
 - **Recap image for Instagram:** from the summary or any session in History. A 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, muscles trained, personal bests) or **Full** (plus every exercise), over a gradient, a bundled gym photo or one picked from Photos, with an optional title of your own ("Killer day") printed big under the date and kept with the session. **Share** opens the iOS share sheet, Instagram included. Every recap prints `aelena.com/sets`.
 - **A run after the gym:** when a timed session is over and you log something later that day outside it (a run on the way home), the bar above the groups offers **Add to today's session** next to **Complete**: the run joins the session, the summary and total time are rebuilt, and **Share image** makes the recap again with it. The same is offered on the session in History while the day still has loose items.
 - **Session data:** **Export session data** saves the session's raw JSON through the share sheet (Files, the Google Drive app, AirDrop). With a Google client ID set up, **Upload to Google Drive** puts it straight into a `Sets` folder, and Settings can do it after every session. See [Google Drive](#google-drive).
@@ -98,7 +105,7 @@ After an update, the first time the app opens it shows the new version and a few
 
 ## Settings
 
-Your name, English or Español, light / dark / system, five bundled monospace fonts (JetBrains Mono by default, IBM Plex Mono, Victor Mono, Fira Code, Space Mono), keep the screen on, Google Drive, exports and imports, backup and restore, whether the phone keeps the app's storage permanently, and **Share Sets**: a QR code for `https://aelena.com/sets/` to show someone at the gym, with the link and the QR as an image for the share sheet. The same QR is in [docs/sets-qr.png](docs/sets-qr.png); `npm run qr` regenerates both if the address ever changes.
+Your name and body weight, the training partner (name, body weight), English or Español, light / dark / system, five bundled monospace fonts (JetBrains Mono by default, IBM Plex Mono, Victor Mono, Fira Code, Space Mono), keep the screen on, Google Drive, exports and imports, backup and restore, whether the phone keeps the app's storage permanently, and **Share Sets**: a QR code for `https://aelena.com/sets/` to show someone at the gym, with the link and the QR as an image for the share sheet. The same QR is in [docs/sets-qr.png](docs/sets-qr.png); `npm run qr` regenerates both if the address ever changes.
 
 ## Your data
 
@@ -136,10 +143,10 @@ Groups and exercises can be written by hand and imported in **Settings → Impor
 
 Sheet `sets`, one row per set:
 
-| date | time | exercise | exercise_es | group | set_no | reps | seconds | kg | volume_kg | session | exercise_id |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+| date | time | exercise | exercise_es | group | set_no | reps | seconds | kg | body_kg | volume_kg | session | exercise_id |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
-`set_no` counts within the day and exercise; `volume_kg` is reps × kg. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
+`set_no` counts within the day and exercise; `body_kg` is the body weight kept on a bodyweight set; `volume_kg` is reps × kg, or reps × body_kg for a bodyweight set. A `partner sets` sheet with the same columns appears when a training partner has logged sets. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
 
 ## Google Drive
 
@@ -179,7 +186,7 @@ To try it at phone size in a desktop browser: open the dev server, then DevTools
 Project layout:
 
 ```
-src/lib/        repo (all DB operations), db (Dexie schema, versions 1-4), packs (add-only library updates),
+src/lib/        repo (all DB operations), db (Dexie schema, versions 1-5), packs (add-only library updates),
                 seed / catalog / catalog2 (built-in library and curation), config, history (last batch, bests,
                 open workout), overview (Overview figures), summary, recap / recapImage, activity, drive,
                 sessionFiles, wakeLock, export, i18n, names, settings

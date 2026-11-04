@@ -72,6 +72,10 @@ const en = {
   shareText: 'Sets: log your gym and home training on your phone. Free, no App Store.',
   shareLink: 'Share link', shareQr: 'Share QR image', copyLink: 'Copy link',
   addToSession: "Add to today's session", addToThisSession: 'Add the day\'s loose items to this session',
+  bodyKg: 'Body weight (kg)', bodyKgHint: 'Bodyweight sets (pull-ups, push-ups…) then count reps × body weight in the kg totals.',
+  partner: 'Partner', me: 'Me', partnerMode: 'Train with a partner', partnerName: "Partner's name", partnerKg: "Partner's body weight (kg)",
+  partnerHint: 'Each set is logged for one of you: pick who on the Train screen. Session time and rests are shared. The recap makes one image each.',
+  whoLogs: 'Who is logging', shareBoth: 'Share both images', forWho: 'for {name}',
 }
 
 const es = {
@@ -145,6 +149,10 @@ const es = {
   shareText: 'Sets: apunta tu entreno de gimnasio y de casa en el móvil. Gratis, sin App Store.',
   shareLink: 'Compartir enlace', shareQr: 'Compartir imagen QR', copyLink: 'Copiar enlace',
   addToSession: 'Añadir a la sesión de hoy', addToThisSession: 'Añadir lo suelto del día a esta sesión',
+  bodyKg: 'Peso corporal (kg)', bodyKgHint: 'Las series a peso corporal (dominadas, flexiones…) cuentan reps × peso corporal en los totales de kg.',
+  partner: 'Pareja', me: 'Yo', partnerMode: 'Entrenar en pareja', partnerName: 'Nombre de tu pareja', partnerKg: 'Peso corporal de tu pareja (kg)',
+  partnerHint: 'Cada serie se anota para uno de los dos: elige quién en Entrenar. El tiempo de sesión y los descansos son comunes. El resumen en imagen hace una por persona.',
+  whoLogs: 'Quién anota', shareBoth: 'Compartir las dos imágenes', forWho: 'para {name}',
 }
 
 export const dictionaries = { en, es }
@@ -159,4 +167,8 @@ export const t = derived(settings, $s => {
 export const summaryWords = tr => ({
   ...Object.fromEntries(['sets', 'exercises', 'activities', 'volume', 'rest', 'total', 'avg', 'longest', 'autoClosed', 'untimed', 'totalTime'].map(k => [k, tr(k)])),
   lang: get(settings).lang,
+  partner: partnerLabel(get(settings), tr),
 })
+
+/** How the training partner is called: their name from Settings, or "Partner". */
+export const partnerLabel = (s, tr) => s.partnerName?.trim() || tr('partner')

@@ -26,6 +26,11 @@ const defaults = {
   lastSeenVersion: null, // the version whose what's-new screen was dismissed
   keepAwake: 'session', // 'session' (timed session or rest running) | 'always' | 'off'
   recapBg: 'ink',
+  bodyKg: null, // the user's body weight: bodyweight sets (kg empty) count reps × this in the kg totals
+  partnerMode: false, // training with a partner: each set is logged for one of the two
+  partnerName: '',
+  partnerKg: null,
+  who: 'me', // who the next set is logged for while partnerMode is on: 'me' | 'partner'
 }
 
 const read = () => {
@@ -45,4 +50,8 @@ settings.subscribe(s => {
 })
 
 /** Fields that travel with a backup; navigation state stays on the device. */
-export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake }) => ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake })
+export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg }) =>
+  ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg })
+
+/** A body weight field as typed: a positive number, or null when empty or nonsense. */
+export const cleanKg = v => (v === '' || v == null || !Number.isFinite(+v) || +v <= 0 ? null : +v)

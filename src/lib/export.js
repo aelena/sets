@@ -1,6 +1,6 @@
 import { hhmm, dateKey } from './time.js'
 import { paceOf, formatPace } from './activity.js'
-import { trainingTime } from './summary.js'
+import { trainingTime, loadOf } from './summary.js'
 
 /** One row per set, flat, ready for Excel. Set number counts within (day, exercise). */
 export function setRows(sets, { exercises, groups, sessions }) {
@@ -21,7 +21,8 @@ export function setRows(sets, { exercises, groups, sessions }) {
       reps: s.reps ?? null,
       seconds: s.seconds ?? null,
       kg: s.kg ?? null,
-      volume_kg: s.kg != null && s.reps != null ? s.kg * s.reps : null,
+      body_kg: s.bw ?? null,
+      volume_kg: loadOf(s) != null && s.reps != null ? loadOf(s) * s.reps : null,
       session: se[s.sessionId] ? `${dateKey(se[s.sessionId].start)} ${hhmm(se[s.sessionId].start)}` : '',
       exercise_id: s.exerciseId,
     }
@@ -63,6 +64,7 @@ export async function workbook(data) {
   const wb = XLSX.utils.book_new()
   const add = (rows, name) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name)
   add(setRows(data.sets, data), 'sets')
+  if (data.partnerSets?.length) add(setRows(data.partnerSets, data), 'partner sets')
   add(activityRows(data.activityLogs ?? [], data), 'activities')
   add(sessionRows(data.sessions, data.activityLogs ?? []), 'sessions')
   add(noteRows(data.notes), 'notes')
@@ -74,17 +76,22 @@ export async function workbook(data) {
  * Hand a file to the iOS share sheet (Save to Files / iCloud Drive / AirDrop),
  * or download it where sharing files is not supported. Resolves true when the file left the app.
  */
-export async function deliver(blob, filename) {
-  const file = new File([blob], filename, { type: blob.type })
-  if (navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return true }
+export const deliver = (blob, filename) => deliverAll([[blob, filename]])
+
+/** Several files in one share sheet ([blob, filename] pairs), or one download each where sharing files is not supported. */
+export async function deliverAll(items) {
+  const files = items.map(([blob, name]) => new File([blob], name, { type: blob.type }))
+  if (navigator.canShare?.({ files })) {
+    try { await navigator.share({ files }); return true }
     catch (e) { if (e.name === 'AbortError') return false }
   }
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename })
-  document.body.append(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
+  for (const [blob, filename] of items) {
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename })
+    document.body.append(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000)
+  }
   return true
 }
 

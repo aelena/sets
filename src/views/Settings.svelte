@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte'
   import { repo, notify } from '../lib/store.js'
-  import { settings, FONTS } from '../lib/settings.js'
+  import { settings, FONTS, cleanKg } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
   import { dateKey } from '../lib/time.js'
   import { deliver, jsonBlob, workbook } from '../lib/export.js'
@@ -58,6 +58,11 @@
   <h1 class="page-title">{$t('settings')}</h1>
 
   <label>{$t('userName')}<input bind:value={$settings.userName} autocomplete="given-name" /></label>
+  <label>{$t('bodyKg')}
+    <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" value={$settings.bodyKg ?? ''}
+      oninput={e => ($settings.bodyKg = cleanKg(e.currentTarget.value))} />
+  </label>
+  <div class="muted small">{$t('bodyKgHint')}</div>
 
   <div class="stack tight">
     <span class="muted small">{$t('language')}</span>
@@ -95,6 +100,17 @@
       {/each}
     </ul>
   </div>
+
+  <h2>{$t('partner')}</h2>
+  <label class="check"><input type="checkbox" bind:checked={$settings.partnerMode} onchange={() => { if (!$settings.partnerMode) $settings.who = 'me' }} /> {$t('partnerMode')}</label>
+  {#if $settings.partnerMode}
+    <label>{$t('partnerName')}<input bind:value={$settings.partnerName} autocomplete="off" /></label>
+    <label>{$t('partnerKg')}
+      <input type="number" inputmode="decimal" min="0" step="0.5" placeholder="—" value={$settings.partnerKg ?? ''}
+        oninput={e => ($settings.partnerKg = cleanKg(e.currentTarget.value))} />
+    </label>
+  {/if}
+  <div class="muted small">{$t('partnerHint')}</div>
 
   <h2>{$t('data')}</h2>
   <button onclick={exportXlsx}>{$t('exportXlsx')}</button>

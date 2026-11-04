@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.14.0',
+    en: ['Settings → Body weight: pull-ups, push-ups and other bodyweight sets now count in the kg totals.', 'The ✓ view shows the kg done so far, per exercise and in all.', 'Train with a partner: each set is logged for one of you, the summary and the recap image come out for both.'],
+    es: ['Ajustes → Peso corporal: dominadas, flexiones y demás series a peso corporal cuentan ya en los totales de kg.', 'La vista ✓ muestra los kg hechos hasta ahora, por ejercicio y en total.', 'Entrenar en pareja: cada serie se anota para uno de los dos, el resumen y la imagen salen para ambos.'],
+  },
+  {
     version: '0.13.0',
     en: ['Settings → Share Sets: a QR code and the link, to pass the app on.', 'Back from the gym and off for a run? "Add to today\'s session" joins it to the session and remakes the image.'],
     es: ['Ajustes → Compartir Sets: un código QR y el enlace, para pasar la app.', '¿Del gimnasio a correr? "Añadir a la sesión de hoy" la suma a la sesión y rehace la imagen.'],

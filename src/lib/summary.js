@@ -19,7 +19,11 @@ export function trainingTime(session, activityLogs = []) {
 export const setLabel = s =>
   `${s.seconds != null ? `${s.seconds}s` : s.reps}${s.kg != null ? ` @${s.kg}kg` : ''}`
 
-export const volume = sets => sets.reduce((a, s) => a + (s.kg != null && s.reps != null ? s.kg * s.reps : 0), 0)
+/** The weight a set moved: its kg, or the body weight stamped on a bodyweight set (`bw`). */
+export const loadOf = s => s.kg ?? s.bw ?? null
+
+/** kg × reps over the sets; bodyweight sets count their body weight when one was known. Timed sets: nothing. */
+export const volume = sets => sets.reduce((a, s) => a + (loadOf(s) != null && s.reps != null ? loadOf(s) * s.reps : 0), 0)
 
 /**
  * The small text kept with each session once it is stopped.
@@ -30,14 +34,26 @@ const totalPart = (session, logs, L) => {
   return t.extra.length ? ` · ${L.totalTime ?? 'total'} ${duration(t.ms)}` : ''
 }
 
-export function buildSummary({ session, sets, rests, exercisesById, L, activityLogs = [], activitiesById = {} }) {
-  const end = session.end ?? Date.now()
+/** Sets grouped by exercise in the order each was first done: [[exerciseId, sets], ...]. */
+const byExercise = sets => {
   const order = []
   const byEx = new Map()
   for (const s of [...sets].sort((a, b) => a.ts - b.ts)) {
     if (!byEx.has(s.exerciseId)) { byEx.set(s.exerciseId, []); order.push(s.exerciseId) }
     byEx.get(s.exerciseId).push(s)
   }
+  return order.map(id => [id, byEx.get(id)])
+}
+
+/**
+ * `partnerSets`: the training partner's sets of the same session, written as a block of their own
+ * after the user's lines, headed with the partner's name (`L.partner`).
+ */
+export function buildSummary({ session, sets, rests, exercisesById, L, activityLogs = [], activitiesById = {}, partnerSets = [] }) {
+  const end = session.end ?? Date.now()
+  const grouped = byExercise(sets)
+  const order = grouped.map(([id]) => id)
+  const byEx = new Map(grouped)
   const done = rests.filter(r => r.end)
   const restMs = done.map(r => r.end - r.start)
   const total = restMs.reduce((a, b) => a + b, 0)
@@ -61,5 +77,12 @@ export function buildSummary({ session, sets, rests, exercisesById, L, activityL
   }
   for (const a of [...activityLogs].sort((x, y) => x.ts - y.ts))
     lines.push(`${nameById(activitiesById, a.activityId, L.lang)}: ${activityLabel(a)}${a.notes ? ` (${a.notes})` : ''}`)
+  if (partnerSets.length) {
+    const theirs = byExercise(partnerSets)
+    const pv = volume(partnerSets)
+    lines.push(`— ${L.partner ?? 'Partner'} —`)
+    lines.push([`${partnerSets.length} ${L.sets}`, `${theirs.length} ${L.exercises}`, pv ? `${Math.round(pv)} kg ${L.volume}` : null].filter(Boolean).join(' · '))
+    for (const [id, list] of theirs) lines.push(`${nameById(exercisesById, id, L.lang)}: ${list.map(setLabel).join(', ')}`)
+  }
   return lines.join('\n')
 }

@@ -4,7 +4,8 @@
   import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
   import { lastBatch, personalBests, isOpen } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
-  import { t, summaryWords } from '../lib/i18n.js'
+  import { t, summaryWords, partnerLabel } from '../lib/i18n.js'
+  import { volume } from '../lib/summary.js'
   import { clock, dateKey } from '../lib/time.js'
   import { backupNow, daysSince } from '../lib/backup.js'
   import { uploadSession, driveReady } from '../lib/sessionFiles.js'
@@ -29,28 +30,50 @@
   const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
   const todayKey = $derived(dateKey($now))
 
-  // the workout in progress (running timed session, or loose sets not completed yet)
+  // partner mode: every set is logged for one of the two; the screen shows the chosen person's workout
+  const partnerOn = $derived(!!$settings.partnerMode)
+  const who = $derived(partnerOn && $settings.who === 'partner' ? 'partner' : 'me')
+  const myName = $derived($settings.userName?.trim() || $t('me'))
+  const theirName = $derived(partnerLabel($settings, $t))
+  const whoName = $derived(partnerOn ? (who === 'partner' ? theirName : myName) : '')
+  const otherName = $derived(who === 'partner' ? myName : theirName)
+  const bodyKg = $derived(who === 'partner' ? $settings.partnerKg : $settings.bodyKg)
+  const tableOf = by => (by === 'partner' ? db.partnerSets : db.sets)
+
+  // the workout in progress (running timed session, or loose sets not completed yet), per person
   const activeId = $derived($activeSession?.id ?? null)
   let openSets = $state([])
+  let openPartner = $state([])
+  const openOf = (table, id) => (id ? table.where('sessionId').equals(id).sortBy('ts') : table.filter(s => !s.sessionId).sortBy('ts'))
   $effect(() => {
     const id = activeId
-    const sub = liveQuery(() => (id ? db.sets.where('sessionId').equals(id).sortBy('ts') : db.sets.filter(s => !s.sessionId).sortBy('ts')))
-      .subscribe(v => (openSets = v))
+    const sub = liveQuery(() => openOf(db.sets, id)).subscribe(v => (openSets = v))
+    return () => sub.unsubscribe()
+  })
+  $effect(() => {
+    const id = activeId
+    if (!partnerOn) { openPartner = []; return }
+    const sub = liveQuery(() => openOf(db.partnerSets, id)).subscribe(v => (openPartner = v))
     return () => sub.unsubscribe()
   })
   // Today mode: everything in the current workout, any group, in the order first done
-  const todaySets = $derived(openSets)
+  const todaySets = $derived(who === 'partner' ? openPartner : openSets)
+  const otherSets = $derived(who === 'partner' ? openSets : openPartner)
   const todayOnly = $derived(!!$settings.todayOnly)
   const todayIds = $derived([...new Set(todaySets.map(s => s.exerciseId))])
   const ids = $derived(todayOnly ? todayIds : onActivities ? [] : (group?.exerciseIds ?? []))
   const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || !e.archived)))
+  // the kg tally of the current workout: what the ✓ view shows
+  const tally = $derived({ sets: todaySets.length, exercises: todayIds.length, kg: Math.round(volume(todaySets)) })
+  const nf = $derived(new Intl.NumberFormat($settings.lang))
   /** In Today mode a new set goes to the group the exercise was last logged from today. */
   const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : group?.id)
-  // every set ever logged for the listed exercises: today's progress, last time, personal bests
+  // every set the person ever logged for the listed exercises: last time, personal bests
   let history = $state([])
   $effect(() => {
-    const want = ids
-    const sub = liveQuery(() => db.sets.where('exerciseId').anyOf(want).toArray()).subscribe(v => (history = v))
+    const want = ids, table = tableOf(who)
+    history = [] // switching person: never show the other one's history meanwhile
+    const sub = liveQuery(() => table.where('exerciseId').anyOf(want).toArray()).subscribe(v => (history = v))
     return () => sub.unsubscribe()
   })
   const perExercise = $derived.by(() => {
@@ -58,14 +81,15 @@
     for (const ex of list) {
       const mine = history.filter(s => s.exerciseId === ex.id)
       out[ex.id] = {
-        today: mine.filter(s => isOpen(s, activeId)).sort((a, b) => a.ts - b.ts),
+        today: todaySets.filter(s => s.exerciseId === ex.id),
         last: lastBatch(mine, activeId),
         bests: personalBests(mine),
+        other: partnerOn ? { name: otherName, n: otherSets.filter(s => s.exerciseId === ex.id).length } : null,
       }
     }
     return out
   })
-  const empty = { today: [], last: null, bests: new Set() }
+  const empty = { today: [], last: null, bests: new Set(), other: null }
 
   // anything logged outside a timed session: "Complete" files it into its day's untimed session
   let loose = $state({ sets: [], activityLogs: [], days: [] })
@@ -73,7 +97,7 @@
     const sub = liveQuery(() => repo.pendingAdHoc()).subscribe(v => (loose = v))
     return () => sub.unsubscribe()
   })
-  const looseCount = $derived(loose.sets.length + loose.activityLogs.length)
+  const looseCount = $derived(loose.sets.length + loose.activityLogs.length + (loose.partnerSets?.length ?? 0))
   const looseText = $derived(loose.days.length === 1 && loose.days[0] === todayKey
     ? $t('looseToday', { n: looseCount })
     : $t('looseDays', { n: looseCount, k: loose.days.length }))
@@ -133,8 +157,17 @@
     <span class="grow"></span>
     <button class="icon toggle" aria-label={$t('todayOnly')} aria-pressed={todayOnly} onclick={() => ($settings.todayOnly = !todayOnly)}><Icon name="check" /></button>
   </div>
+  {#if partnerOn}
+    <div class="segmented who" role="group" aria-label={$t('whoLogs')}>
+      <button aria-pressed={who === 'me'} onclick={() => ($settings.who = 'me')}>{myName}</button>
+      <button aria-pressed={who === 'partner'} class="partner" onclick={() => ($settings.who = 'partner')}>{theirName}</button>
+    </div>
+  {/if}
   {#if todayOnly}
     <div class="today-bar small" data-testid="today-bar">{$t('todayOnlyOn')}</div>
+    {#if tally.sets}
+      <div class="tally" data-testid="today-tally">{tally.sets} {$t('sets')} · {tally.exercises} {$t('exercises')} · {nf.format(tally.kg)} kg</div>
+    {/if}
   {:else if $groups?.length}
     <div class="groups" role="tablist">
       {#each $groups as g (g.id)}
@@ -175,7 +208,7 @@
       {#each list as ex (ex.id)}
         {@const h = perExercise[ex.id] ?? empty}
         <li>
-          <ExerciseRow exercise={ex} sets={h.today} last={h.last} bests={h.bests}
+          <ExerciseRow exercise={ex} sets={h.today} last={h.last} bests={h.bests} other={h.other} kg={todayOnly ? volume(h.today) : null}
             onlog={() => (logging = { exercise: ex })} onedit={set => (logging = { exercise: ex, set })} />
         </li>
       {/each}
@@ -215,8 +248,9 @@
 </main>
 
 {#if logging}
-  <LogSheet exercise={logging.exercise} set={logging.set} groupId={groupFor(logging.exercise.id)}
-    done={(perExercise[logging.exercise.id] ?? empty).today} onclose={() => (logging = null)} />
+  <LogSheet exercise={logging.exercise} set={logging.set} groupId={groupFor(logging.exercise.id)} by={who} who={whoName} bw={bodyKg}
+    done={(perExercise[logging.exercise.id] ?? empty).today} last={who === 'partner' ? (perExercise[logging.exercise.id] ?? empty).last?.sets.at(-1) ?? null : null}
+    onclose={() => (logging = null)} />
 {/if}
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
 {#if watchOpen}<Stopwatch onclose={() => (watchOpen = false)} />{/if}
@@ -244,6 +278,10 @@
   .loose button { padding: 0 10px; }
   .toggle[aria-pressed='true'] { background: var(--ok); border-color: var(--ok); color: var(--bg); }
   .today-bar { max-width: 608px; margin: 10px auto 0; color: var(--ok); font-weight: 700; }
+  .tally { max-width: 608px; margin: 4px auto 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .who { max-width: 608px; margin: 8px auto 0; }
+  .who button { min-height: 34px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .partner[aria-pressed='true'] { color: var(--accent); }
   .activity { padding: 6px 8px 6px 12px; }
   .activity .name { display: grid; gap: 2px; }
   .aname { font-weight: 700; }

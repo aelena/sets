@@ -1,6 +1,6 @@
 import { MUSCLES } from './seed.js'
 import { dateKey } from './time.js'
-import { trainingTime } from './summary.js'
+import { trainingTime, loadOf } from './summary.js'
 
 /** Amber after a week without training it, stale after two. (user, 2026-10-16) */
 export const DUE_DAYS = 7
@@ -71,7 +71,7 @@ export function weekly({ sessions, sets = [], activityLogs = [], weeks = 12, now
   for (const x of [...sets, ...activityLogs]) at(midnight(x.date))?.days.add(x.date)
   for (const s of sets) {
     const r = at(midnight(s.date))
-    if (r && s.kg != null && s.reps != null) r.volume += s.kg * s.reps
+    if (r && loadOf(s) != null && s.reps != null) r.volume += loadOf(s) * s.reps
   }
   for (const l of activityLogs) {
     const r = at(midnight(l.date))

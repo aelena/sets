@@ -16,6 +16,9 @@ import { normalizeConfig } from './config.js'
  *   (v3: no schema change; adds the classic sample groups on upgrade)
  *   meta           v4: { key: 'packs', applied: [pack ids] }
  *   activityLogs   v2: { ts, date, activityId, sessionId, minutes, km, notes }; pace is derived
+ *   partnerSets    v5: the training partner's sets, same shape as `sets` (bw: body weight stamped on a
+ *                  bodyweight set). A table of their own so nothing of the user's history, bests or
+ *                  charts can ever count them by accident.
  */
 export const createDb = (name = 'exercise-tracker') => {
   const db = new Dexie(name)
@@ -50,6 +53,8 @@ export const createDb = (name = 'exercise-tracker') => {
     const has = (await tx.table('exercises').count()) || (await tx.table('groups').count())
     if (has) await tx.table('meta').put({ key: 'packs', applied: ['base-1', 'classic-1'] })
   })
+  // v5: the partner's sets (couples mode)
+  db.version(5).stores({ partnerSets: '++id, ts, date, exerciseId, sessionId, [exerciseId+date]' })
   db.on('populate', tx => tx.table('activities').bulkAdd(DEFAULT_ACTIVITIES))
   return db
 }

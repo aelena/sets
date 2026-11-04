@@ -9,7 +9,7 @@
   import { onMount } from 'svelte'
   import { db } from '../lib/store.js'
   import { settings } from '../lib/settings.js'
-  import { t } from '../lib/i18n.js'
+  import { t, partnerLabel } from '../lib/i18n.js'
   import { backupNow, daysSince } from '../lib/backup.js'
   import { shareSession, uploadSession, driveReady } from '../lib/sessionFiles.js'
 
@@ -22,15 +22,18 @@
   onMount(async () => {
     if (session.untimed) return
     const l = await repo.looseOnDayOf(session.id)
-    if (!l.sets.length && !l.activityLogs.length) return
+    const theirs = l.partnerSets ?? []
+    if (!l.sets.length && !l.activityLogs.length && !theirs.length) return
     const [ex, ac] = await Promise.all([db.exercises.toArray(), db.activities.toArray()])
     const exById = Object.fromEntries(ex.map(e => [e.id, e])), acById = Object.fromEntries(ac.map(a => [a.id, a]))
     const lang = get(settings).lang
+    const setsLine = rows => get(t)('looseSets', { n: rows.length, names: [...new Set(rows.map(s => nameById(exById, s.exerciseId, lang)))].join(', ') })
     loose = {
-      count: l.sets.length + l.activityLogs.length,
+      count: l.sets.length + l.activityLogs.length + theirs.length,
       items: [
         ...l.activityLogs.map(a => `${nameById(acById, a.activityId, lang)} ${activityLabel(a)}`),
-        ...(l.sets.length ? [get(t)('looseSets', { n: l.sets.length, names: [...new Set(l.sets.map(s => nameById(exById, s.exerciseId, lang)))].join(', ') })] : []),
+        ...(l.sets.length ? [setsLine(l.sets)] : []),
+        ...(theirs.length ? [`${partnerLabel(get(settings), get(t))}: ${setsLine(theirs)}`] : []),
       ],
     }
   })

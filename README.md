@@ -72,6 +72,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 - Running, rowing, bike: duration, distance and pace (min/km). Fill any two and the third is worked out (`30 min` at `6'` → 5 km). Pace accepts `6`, `6:00`, `6'` or `6'30"`.
 - **Sprints:** seconds or metres, or both (`70 s · 400 m · 2:55/km`). Nothing is prefilled, and sprints never show as stale.
 - Activities appear in the summary, the recap, History, Progress (minutes, km, pace) and their own Excel sheet. Rename or remove them under **Edit → Activity**.
+- **Import a run (GPX)** (0.17.0): the run your watch or running app recorded (Apple Watch through an exporter such as HealthFit or RunGap, Strava, Garmin Connect, Nike Run Club, Runkeeper...), exported as GPX and picked from Files. The sheet shows the track's shape, distance, moving time (stops and auto-pause gaps left out), pace, climb (rises under 3 m are GPS noise) and the start and end times, lets you log it as Running or any other activity, and ticks **Add to that day's session** when the day has a finished timed session. The run is logged at its own date and time, so a run from last week lands on last week; the label carries the climb (`30 min · 5.2 km · 5:46/km · ↑42 m`), the recap image draws the route, and the route travels with backups, session exports and the Excel `ascent_m` column. The same run twice is refused. Sets tracks nothing itself: a web app on an iPhone cannot read GPS with the screen locked, so the recording stays with the tools built for it.
 
 ## Progress
 
@@ -164,7 +165,7 @@ Sheet `sets`, one row per set:
 | date | time | exercise | exercise_es | group | set_no | reps | seconds | kg | body_kg | lifts | volume_kg | session | exercise_id |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
-`set_no` counts within the day and exercise; `body_kg` is the body weight kept on a bodyweight set; `lifts` the lifts per rep (1 unless set); `volume_kg` is reps × kg × lifts, or reps × body_kg × lifts for a bodyweight set. A `partner sets` sheet with the same columns appears when a training partner has logged sets. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
+`set_no` counts within the day and exercise; `body_kg` is the body weight kept on a bodyweight set; `lifts` the lifts per rep (1 unless set); `volume_kg` is reps × kg × lifts, or reps × body_kg × lifts for a bodyweight set. A `partner sets` sheet with the same columns appears when a training partner has logged sets. Sheets `activities` (date, time, activity, activity_es, minutes, km, pace_min_km, ascent_m, notes, session), `sessions` (date, start, end, minutes, summary) and `notes` come with it.
 
 ## Google Drive
 
@@ -206,11 +207,12 @@ Project layout:
 ```
 src/lib/        repo (all DB operations), db (Dexie schema, versions 1-5), packs (add-only library updates),
                 seed / catalog / catalog2 (built-in library and curation), config, history (last batch, bests,
-                open workout), overview (Overview figures), summary, recap / recapImage, activity, drive,
-                sessionFiles, wakeLock, export, i18n, names, settings
+                open workout), overview (Overview figures), summary, recap / recapImage, activity, gpx (GPX
+                reader, distance, moving time, climb, track fitting), drive, sessionFiles, wakeLock, export,
+                i18n, names, settings
 src/views/      Train, Progress, Edit, Settings
-src/components/ ExerciseRow, LogSheet, ActivitySheet, NotesSheet, RestTimer, SummaryModal, RecapSheet,
-                Overview, MuscleWeeks, Calendar, Chart, ExerciseForm, Splash, Sheet, Toast, TabBar, Icon
+src/components/ ExerciseRow, LogSheet, ActivitySheet, GpxSheet, Route, NotesSheet, RestTimer, SummaryModal,
+                RecapSheet, Overview, MuscleWeeks, Calendar, Chart, ExerciseForm, Splash, Sheet, Toast, TabBar, Icon
 tests/unit      logic and repository tests
 tests/e2e       Playwright flows at iPhone size; recap.spec.js renders the recap samples
 ```
@@ -223,6 +225,7 @@ The build is static and uses relative paths, so it works from any HTTPS static h
 
 - **Weight progression per set** (50 kg, then 60, then 70): logged sets already carry their own weight; the plan would let `kg` be a list, one value per set. The UI for editing it is still open.
 - Imperial units (lb, miles) as a setting.
+- Live run tracking (GPS while the app is open, screen kept on) was looked at and not built: iOS suspends a web app when the phone locks, and the phone's pedometer and Health data are out of reach of the web. Importing the GPX of the app that did record it covers the use.
 
 ## License
 

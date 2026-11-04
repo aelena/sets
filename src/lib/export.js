@@ -51,6 +51,7 @@ export function activityRows(logs, { activities = [], sessions = [] }) {
     minutes: l.minutes ?? null,
     km: l.km ?? null,
     pace_min_km: paceOf(l) ? formatPace(paceOf(l)) : '',
+    ascent_m: l.gpx?.ascent ?? null,
     notes: l.notes ?? '',
     session: se[l.sessionId] ? `${dateKey(se[l.sessionId].start)} ${hhmm(se[l.sessionId].start)}` : '',
   }))

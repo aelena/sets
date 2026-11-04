@@ -737,3 +737,52 @@ test('training with a partner: sets are counted apart, the summary has their blo
   await expect.poll(() => names.length, { timeout: 15_000 }).toBe(2)
   expect(names.map(n => n.replace(/\d{4}-\d\d-\d\d/, 'D')).sort()).toEqual(['sets-recap-D-ana.jpg', 'sets-recap-D.jpg'])
 })
+
+test('import a GPX run: the sheet shows the run, it joins the gym session of its day, the recap carries the route', async ({ page }) => {
+  // the gym session in the evening of Oct 20, then the run of that morning imported the day after
+  await page.clock.setFixedTime(new Date(2026, 9, 20, 18, 0))
+  await page.reload()
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.clock.setFixedTime(new Date(2026, 9, 20, 19, 0))
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  await page.clock.setFixedTime(new Date(2026, 9, 21, 10, 0))
+  await page.reload()
+  const t0 = new Date(2026, 9, 20, 8, 0).getTime()
+  const pts = Array.from({ length: 61 }, (_, i) => `<trkpt lat="${(40.4 + i * 0.00015).toFixed(5)}" lon="${(-3.7 + (i < 30 ? 0 : (i - 30) * 0.0002)).toFixed(5)}"><ele>${650 + Math.floor(i / 10) * 4}</ele><time>${new Date(t0 + i * 30_000).toISOString()}</time></trkpt>`)
+  const buffer = Buffer.from(`<?xml version="1.0"?><gpx version="1.1" creator="test"><trk><name>Retiro loop</name><trkseg>${pts.join('')}</trkseg></trk></gpx>`)
+  await page.getByRole('tab', { name: 'Cardio & more' }).click()
+  await page.getByLabel('Import a run (GPX)…').setInputFiles({ name: 'retiro.gpx', mimeType: 'application/gpx+xml', buffer })
+  await expect(page.getByRole('dialog', { name: 'Import run' })).toBeVisible()
+  await expect(page.getByText('Retiro loop')).toBeVisible()
+  await expect(page.getByTestId('gpx-when')).toContainText('08:00 → 08:30')
+  await expect(page.getByTestId('gpx-stats')).toContainText('30 min')
+  await expect(page.getByTestId('gpx-stats')).toContainText('↑24 m')
+  await expect(page.getByTestId('route')).toBeVisible()
+  await expect(page.getByLabel("Add to that day's session (18:00 → 19:00)")).toBeChecked()
+  await page.getByRole('button', { name: 'Import run' }).click()
+
+  // bundled straight into the gym session: the summary comes up with the run and the total time
+  const summary = page.getByTestId('summary')
+  await expect(summary).toContainText('1 sets · 1 exercises · 1 activities')
+  await expect(summary).toContainText(/Running: 30 min · 1\.\d+ km · \d+:\d\d\/km · ↑24 m/)
+  await expect(summary).toContainText('total 1h 30m')
+  await expect(page.getByTestId('loose-bar')).toHaveCount(0)
+
+  // the recap image renders with the route on it
+  await page.getByRole('button', { name: 'Share image' }).click()
+  const img = page.getByTestId('recap-preview')
+  await expect(img).toBeVisible()
+  expect(await img.evaluate(i => [i.naturalWidth, i.naturalHeight])).toEqual([1080, 1920])
+  if (process.env.GPX_SHOT) await img.screenshot({ path: process.env.GPX_SHOT })
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  // the same file again is refused
+  await page.getByRole('button', { name: 'Close' }).last().click()
+  await page.getByLabel('Import a run (GPX)…').setInputFiles({ name: 'retiro.gpx', mimeType: 'application/gpx+xml', buffer })
+  await page.getByRole('button', { name: 'Import run' }).click()
+  await expect(page.getByRole('alert')).toHaveText('This run is already logged.')
+})

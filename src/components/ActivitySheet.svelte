@@ -1,6 +1,7 @@
 <script>
   import { untrack } from 'svelte'
   import Sheet from './Sheet.svelte'
+  import Route from './Route.svelte'
   import { repo, notify } from '../lib/store.js'
   import { t } from '../lib/i18n.js'
   import { settings } from '../lib/settings.js'
@@ -55,7 +56,7 @@
       const v = sprintValues()
       return activityLabel({ minutes: num(v.minutes), km: num(v.km), short: true })
     }
-    return activityLabel({ minutes: num(minutes), km: num(km) })
+    return activityLabel({ minutes: num(minutes), km: num(km), gpx: log?.gpx })
   })
 
   async function submit(e) {
@@ -86,6 +87,7 @@
 
 <Sheet title={activity ? nameOf(activity, $settings.lang) : $t('otherActivity')} {onclose}>
   <form class="stack" onsubmit={submit}>
+    {#if log?.gpx?.track?.length > 1}<Route track={log.gpx.track} height={120} />{/if}
     {#if !activity}
       <label>{$t('activityName')}<input bind:value={name} required placeholder="Swimming, Hike, Yoga…" /></label>
     {/if}

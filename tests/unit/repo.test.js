@@ -2,7 +2,9 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createDb } from '../../src/lib/db.js'
 import { createRepo, IDLE_CLOSE_MS } from '../../src/lib/repo.js'
-import { setRows } from '../../src/lib/export.js'
+import { setRows, activityRows } from '../../src/lib/export.js'
+import { activityLabel } from '../../src/lib/activity.js'
+import { recapData } from '../../src/lib/recap.js'
 import { daily } from '../../src/lib/metrics.js'
 
 const L = { sets: 'sets', exercises: 'exercises', volume: 'volume', rest: 'Rest', total: 'total', avg: 'avg', longest: 'longest', autoClosed: 'auto-closed' }
@@ -251,6 +253,47 @@ describe('day roll-over', () => {
     expect((await repo.db.sets.get(y)).sessionId).toBe(rolled[0].id)
     expect((await repo.db.sets.get(t)).sessionId).toBeNull() // today stays open
     expect(await repo.completeAdHoc(W, { before: '2026-10-16' })).toEqual([])
+  })
+})
+
+describe('importing a run from a GPX file', () => {
+  const W = { ...L, activities: 'activities', untimed: 'untimed', totalTime: 'total' }
+  const morning = new Date(2026, 9, 16, 9, 0).getTime()
+  const run = { name: 'Morning Run', start: morning, end: morning + 31 * MIN, km: 5.2, minutes: 30, elapsedMinutes: 31, ascent: 42, track: [[40, -3.7], [40.01, -3.7], [40.01, -3.69]], points: 900 }
+
+  it('logs the run at its own time, loose, with the track; the label shows the climb; twice is refused', async () => {
+    at(T0)
+    const id = await repo.importGpx(run, { activityId: 'running', notes: ' easy ' })
+    const row = await repo.db.activityLogs.get(id)
+    expect(row).toMatchObject({ ts: morning, date: '2026-10-16', sessionId: null, minutes: 30, km: 5.2, notes: 'easy' })
+    expect(row.gpx).toEqual({ name: 'Morning Run', elapsed: 31, ascent: 42, track: run.track, points: 900 })
+    expect(activityLabel(row)).toBe('30 min · 5.2 km · 5:46/km · ↑42 m')
+    await expect(repo.importGpx(run, { activityId: 'running' })).rejects.toThrow('gpxDuplicate')
+    expect(await repo.importGpx(run, { activityId: 'rowing' })).not.toBe(id) // another activity at the same time is another log
+    expect((await repo.pendingAdHoc()).days).toEqual(['2026-10-16'])
+  })
+
+  it('a route without times is logged now, in the running session', async () => {
+    at(T0); const s = await repo.startSession()
+    const id = await repo.importGpx({ ...run, start: null, end: null, minutes: null, elapsedMinutes: null }, { activityId: 'running' })
+    expect(await repo.db.activityLogs.get(id)).toMatchObject({ ts: T0, sessionId: s.id, minutes: null, km: 5.2 })
+  })
+
+  it("joins the day's timed session like any loose row, and travels with the exports", async () => {
+    at(T0); const gym = await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    at(T0 + 60 * MIN); await repo.stopSession(W)
+    at(T0 + 120 * MIN); await repo.importGpx(run, { activityId: 'running' })
+    const s = await repo.bundleLoose(gym.id, W)
+    expect(s.summary).toContain('Running: 30 min · 5.2 km · 5:46/km · ↑42 m')
+    expect(s.summary.split('\n')[0]).toContain('total 1h 30m')
+    const x = await repo.sessionExport(gym.id)
+    expect(x.activities[0]).toMatchObject({ activity: 'Running', km: 5.2, gpx: { name: 'Morning Run', elapsedMinutes: 31, ascent: 42, track: run.track } })
+    const rows = activityRows(await repo.db.activityLogs.toArray(), await repo.exportData())
+    expect(rows[0]).toMatchObject({ date: '2026-10-16', time: '09:00', activity: 'Running', km: 5.2, pace_min_km: '5:46', ascent_m: 42 })
+    const data = recapData({ session: s, sets: await repo.db.sets.toArray(), exercisesById: {}, activityLogs: await repo.db.activityLogs.toArray(), activitiesById: {} })
+    expect(data.route).toEqual(run.track)
+    expect((await repo.backup()).activityLogs[0].gpx.track).toEqual(run.track) // the backup carries the route
   })
 })
 

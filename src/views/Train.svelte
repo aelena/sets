@@ -1,7 +1,7 @@
 <script>
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
-  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary } from '../lib/store.js'
+  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary, notify } from '../lib/store.js'
   import { lastBatch, personalBests, isOpen } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords, partnerLabel } from '../lib/i18n.js'
@@ -14,6 +14,8 @@
   import LogSheet from '../components/LogSheet.svelte'
   import NotesSheet from '../components/NotesSheet.svelte'
   import ActivitySheet from '../components/ActivitySheet.svelte'
+  import GpxSheet from '../components/GpxSheet.svelte'
+  import { parseGpx } from '../lib/gpx.js'
   import Stopwatch from '../components/Stopwatch.svelte'
   import { watch, running as watchRunning } from '../lib/stopwatch.js'
   import { activityLabel } from '../lib/activity.js'
@@ -23,6 +25,16 @@
   let notesOpen = $state(false)
   let watchOpen = $state(false)
   let doing = $state(null) // { activity | null, log?, last? }
+  let gpx = $state.raw(null) // { run, fileName }: a GPX file read, waiting in its sheet (raw: the track goes to IndexedDB as is)
+
+  /** A GPX file from the Files picker: parsed here, logged from the sheet. */
+  async function chooseGpx(e) {
+    const file = e.currentTarget.files[0]
+    e.currentTarget.value = ''
+    if (!file) return
+    try { gpx = { run: parseGpx(await file.text()), fileName: file.name.replace(/\.gpx$/i, '') } }
+    catch (err) { notify($t(err.message === 'gpxNoTrack' ? 'gpxNoTrack' : 'gpxBad')) }
+  }
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const ACTIVITIES_TAB = '__activities'
@@ -242,6 +254,9 @@
       <li class="activity">
         <button class="ghost other" onclick={() => (doing = { activity: null })}>{$t('otherActivity')}</button>
       </li>
+      <li class="activity">
+        <label class="ghost other file">{$t('importGpx')}<input type="file" accept=".gpx,application/gpx+xml" onchange={chooseGpx} /></label>
+      </li>
     {/if}
   </ul>
   {/if}
@@ -255,6 +270,7 @@
 {#if notesOpen}<NotesSheet onclose={() => (notesOpen = false)} />{/if}
 {#if watchOpen}<Stopwatch onclose={() => (watchOpen = false)} />{/if}
 {#if doing}<ActivitySheet activity={doing.activity} log={doing.log} last={doing.last} onclose={() => (doing = null)} />{/if}
+{#if gpx}<GpxSheet run={gpx.run} fileName={gpx.fileName} onclose={() => (gpx = null)} />{/if}
 
 <style>
   header {
@@ -288,4 +304,6 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 6px; }
   .chip { min-height: 34px; padding: 0 10px; border-radius: 999px; font-size: 13px; background: var(--soft); }
   .other { width: 100%; text-align: left; color: var(--muted); padding-left: 0; }
+  .file { position: relative; display: flex; align-items: center; min-height: 44px; cursor: pointer; }
+  .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 </style>

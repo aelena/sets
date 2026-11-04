@@ -311,6 +311,24 @@ export const createRepo = (db, clock = () => Date.now()) => {
     const session = await activeSession()
     return db.activityLogs.add({ ts, date: dateKey(ts), activityId, sessionId: session?.id ?? null, ...values, notes: notes.trim(), ...(short ? { short: true } : {}) })
   }
+  /**
+   * A run recorded elsewhere (parseGpx of a file from the watch or the running app), logged at its
+   * own start time and date, so it lands on the right day. Loose (no session): the day's timed
+   * session can take it in with bundleLoose, Complete files it into the day's untimed one.
+   * A route without times is logged now, like a hand-typed activity. Throws 'gpxDuplicate' when
+   * the same run (same activity, same start) is already in.
+   */
+  async function importGpx(run, { activityId, notes = '' }) {
+    const ts = run.start ?? clock()
+    if (run.start != null && await db.activityLogs.where('ts').equals(ts).filter(l => l.activityId === activityId && !!l.gpx).count())
+      throw new Error('gpxDuplicate')
+    const session = run.start == null ? await activeSession() : null
+    const { minutes, km } = resolve({ minutes: run.minutes, km: run.km })
+    return db.activityLogs.add({
+      ts, date: dateKey(ts), activityId, sessionId: session?.id ?? null, minutes, km, notes: notes.trim(),
+      gpx: { name: run.name ?? '', elapsed: run.elapsedMinutes ?? null, ascent: run.ascent ?? 0, track: run.track ?? [], points: run.points ?? 0 },
+    })
+  }
   const updateActivityLog = (id, { minutes, km, pace, notes = '' }) => db.activityLogs.update(id, { ...resolve({ minutes, km, pace }), notes: notes.trim() })
   const deleteActivityLog = id => db.activityLogs.delete(id)
   const restoreActivityLog = row => db.activityLogs.put(row)
@@ -438,7 +456,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
       },
       sets: sets.map(setOut),
       ...(partnerSets.length ? { partnerSets: partnerSets.map(setOut) } : {}),
-      activities: activityLogs.map(l => ({ time: iso(l.ts), activity: name(activities, l.activityId), minutes: l.minutes, km: l.km, notes: l.notes })),
+      activities: activityLogs.map(l => ({ time: iso(l.ts), activity: name(activities, l.activityId), minutes: l.minutes, km: l.km, notes: l.notes,
+        ...(l.gpx ? { gpx: { name: l.gpx.name, elapsedMinutes: l.gpx.elapsed, ascent: l.gpx.ascent, track: l.gpx.track } } : {}) })),
       notes: notes.map(n => ({ time: iso(n.ts), text: n.text })),
     }
   }
@@ -449,6 +468,6 @@ export const createRepo = (db, clock = () => Date.now()) => {
     activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
-    setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, timedSessionOn, looseOnDayOf, bundleLoose, ensureActivity, logActivity, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
+    setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, timedSessionOn, looseOnDayOf, bundleLoose, ensureActivity, logActivity, importGpx, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,
   }
 }

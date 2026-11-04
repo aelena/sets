@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.17.0',
+    en: ['Cardio & more → Import a run (GPX): the run your watch or running app recorded, with its distance, moving time, pace, climb and route; it joins the day\'s session and the recap image draws the route.', 'Sets still tracks nothing itself: no GPS, no screen kept on.'],
+    es: ['Cardio y más → Importar carrera (GPX): la carrera que grabó el reloj o la app de correr, con distancia, tiempo en movimiento, ritmo, desnivel y recorrido; se une a la sesión del día y la imagen resumen dibuja el recorrido.', 'Sets sigue sin registrar nada por sí mismo: ni GPS ni pantalla encendida.'],
+  },
+  {
     version: '0.16.0',
     en: ['Lifts per rep: compound moves (3-phase supercurl ×3, arm superseries ×3, disc routine ×10) now count every lift in the kg totals; set it on any exercise in Edit.', 'Zottman Curl in Biceps, Divergent Shoulder Press in Shoulders; your curl-to-overhead, hammer-twist curl and narrow-bar pulldown named; the two seated rows stay apart.'],
     es: ['Levantamientos por rep: los movimientos compuestos (supercurl en 3 fases ×3, superserie de brazos ×3, rutina con disco ×10) cuentan ya cada levantamiento en los totales de kg; ajústalo en cualquier ejercicio desde Editar.', 'Curl Zottman en Bíceps, press de hombros divergente en Hombros; tu curl con elevación vertical, el curl con giro a martillo y el jalón con barra estrecha tienen nombre; los dos remos sentados siguen separados.'],

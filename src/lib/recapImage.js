@@ -1,4 +1,5 @@
 import { FORMATS, FLAME } from './recap.js'
+import { fitTrack } from './gpx.js'
 
 /** Printed on every recap so whoever sees it can find the app. */
 export const APP_URL = 'aelena.com/sets'
@@ -87,6 +88,7 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
     ctx.font = font(700, story ? 84 : 72)
     ctx.fillText(fit(ctx, data.title, inner), pad, y)
   }
+  const headerBottom = y
 
   // the block of numbers sits at the bottom, clear of Instagram's top bar and reply bar,
   // so a photo shows through above it; the exercise list gets whatever room is left
@@ -104,6 +106,24 @@ export async function drawRecap(data, { format = 'story', detail = 'full', backg
   const shown = lines.length > room ? lines.slice(0, Math.max(0, room - 1)) : lines
   const listed = shown.length + (shown.length < lines.length ? 1 : 0)
   y = bottom - fixed - Math.max(0, listed - 1) * lineH
+
+  // an imported run: its route, Strava-style, in whatever band is free between the header and the numbers
+  const routeTop = headerBottom + 60, routeBottom = y - durPx - 40
+  const pts = routeBottom - routeTop >= 220 ? fitTrack(data.route, inner, routeBottom - routeTop) : []
+  if (pts.length) {
+    ctx.save()
+    ctx.translate(pad, routeTop)
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'
+    ctx.lineWidth = 7
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    pts.forEach(([x, py], i) => (i ? ctx.lineTo(x, py) : ctx.moveTo(x, py)))
+    ctx.stroke()
+    ctx.fillStyle = flameColor
+    ctx.beginPath(); ctx.arc(pts[0][0], pts[0][1], 12, 0, Math.PI * 2); ctx.fill()
+    ctx.restore()
+  }
 
   ctx.fillStyle = white
   ctx.font = font(700, durPx)

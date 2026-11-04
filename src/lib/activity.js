@@ -40,9 +40,10 @@ export function resolve({ minutes, km, pace }) {
 
 export const paceOf = log => (log.minutes && log.km ? log.minutes / log.km : null)
 
-/** "30 min · 5 km · 6:00/km", parts left out when unknown. */
+/** "30 min · 5 km · 6:00/km · ↑120 m", parts left out when unknown; the climb comes with an imported run. */
 export function activityLabel(log) {
   const pace = paceOf(log)
+  const climb = log.gpx?.ascent >= 5 ? `↑${Math.round(log.gpx.ascent)} m` : null
   if (log.short) // sprints: seconds and metres read better than 0.5 min and 0.4 km
     return [
       log.minutes != null ? `${Math.round(log.minutes * 60)} s` : null,
@@ -53,6 +54,7 @@ export function activityLabel(log) {
     log.minutes != null ? `${round(log.minutes, 1)} min` : null,
     log.km != null ? `${round(log.km, 2)} km` : null,
     pace ? `${formatPace(pace)}/km` : null,
+    climb,
   ].filter(Boolean).join(' · ')
 }
 

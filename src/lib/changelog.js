@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.15.0',
+    en: ['Two new groups before the Kegels: Bodyweight (the seven-column chart) and Military Calisthenics (the 28- and 30-day challenges).', 'Kegels · Men and · Women: the pelvic-floor posters, bird dog to child\'s pose.', 'Every target now has at least 4 sets; your hand-made exercises got names in both languages and cues.'],
+    es: ['Dos grupos nuevos antes de los Kegel: Peso corporal (la tabla de siete columnas) y Calistenia militar (los retos de 28 y 30 días).', 'Kegel · Hombres y · Mujeres: los pósteres de suelo pélvico, del perro de caza a la postura del niño.', 'Todos los objetivos tienen ya al menos 4 series; tus ejercicios hechos a mano tienen nombre en los dos idiomas e indicaciones.'],
+  },
+  {
     version: '0.14.0',
     en: ['Settings → Body weight: pull-ups, push-ups and other bodyweight sets now count in the kg totals.', 'The ✓ view shows the kg done so far, per exercise and in all.', 'Train with a partner: each set is logged for one of you, the summary and the recap image come out for both.'],
     es: ['Ajustes → Peso corporal: dominadas, flexiones y demás series a peso corporal cuentan ya en los totales de kg.', 'La vista ✓ muestra los kg hechos hasta ahora, por ejercicio y en total.', 'Entrenar en pareja: cada serie se anota para uno de los dos, el resumen y la imagen salen para ambos.'],

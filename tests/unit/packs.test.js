@@ -58,14 +58,55 @@ describe('applyPacks', () => {
     expect(await repo.applyPacks()).toEqual(PACKS.map(p => p.id))
     expect(await repo.applyPacks()).toEqual([])
     const { groups } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Chest', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'My Warm up Routine', 'Biceps', 'Triceps', 'Shoulders', 'Leg Day', 'Core', 'Back', 'Push ups', 'Chest', 'Bodyweight', 'Military Calisthenics', 'Kegels · Men', 'Kegels · Women'])
     const leg = groups.find(g => g.id === 'leg-day').exerciseIds
     expect(leg.indexOf('glute-bridge')).toBe(leg.indexOf('barbell-hip-thrust') + 1) // appended in order, no new group
     expect(leg.at(-1)).toBe('seated-calf-raise') // then the review additions
     const byName = Object.fromEntries((await repo.library()).exercises.map(e => [e.id, e.name]))
     const pushups = groups.find(g => g.name === 'Push ups').exerciseIds
     expect(byName[pushups.at(-1)]).toBe('Burpees') // no Functional group on a fresh phone
-    expect(groups.find(g => g.id === 'core').exerciseIds.slice(-3).map(id => byName[id])).toEqual(['Lateral Crunch', 'Scissor Kicks', 'Cross Scissors'])
+    const core = groups.find(g => g.id === 'core').exerciseIds.map(id => byName[id])
+    expect(core.slice(-8, -5)).toEqual(['Lateral Crunch', 'Scissor Kicks', 'Cross Scissors'])
+    expect(core.slice(-5)).toEqual(['Lying Leg Raises', 'Sit-ups', 'Reverse Crunches', 'V-ups', 'Flutter Kicks']) // core-3, reusing the Bodyweight ones
+    // 0.15.0: the two bodyweight groups sit before the Kegels, each Kegels group grew, every target is 4+ sets
+    expect(groups.find(g => g.id === 'military-calisthenics').exerciseIds).toHaveLength(40)
+    expect(groups.find(g => g.id === 'bodyweight').exerciseIds).toHaveLength(33)
+    expect(groups.find(g => g.id === 'kegels-men').exerciseIds).toHaveLength(22)
+    expect(groups.find(g => g.id === 'kegels-women').exerciseIds).toHaveLength(19)
+    const all = (await repo.library()).exercises
+    expect(all.filter(e => !e.archived && e.sets < 4)).toEqual([])
+    expect(all.find(e => e.id === 'chest-thrusts').sets).toBe(4) // was 2 in the starter config
+    expect(all.find(e => e.id === 'halos').sets).toBe(5) // more than the floor: untouched
+    expect(all.find(e => e.id === 'air-squats')).toMatchObject({ names: { es: 'Sentadillas sin peso' }, sets: 4, reps: 20 })
+  })
+
+  it('the 4-set floor is applied once and leaves later edits alone', async () => {
+    const repo = createRepo(createDb(`packs-${n++}`))
+    await repo.applyPacks()
+    await repo.db.exercises.update('halos', { sets: 2 })
+    expect(await repo.applyPacks()).toEqual([])
+    expect((await repo.db.exercises.get('halos')).sets).toBe(2)
+  })
+
+  it('curate-5: renames the hand-made exercises under guard, folds an unused duplicate row, fills only gaps', async () => {
+    const repo = createRepo(createDb(`packs-${n++}`))
+    await repo.db.meta.put({ key: 'packs', applied: PACKS.map(p => p.id).filter(id => id !== 'curate-5') })
+    await repo.importConfig({ groups: [{ id: 'nuevo-grupo', name: 'Back', exercises: [
+      { id: 'curl-prone-grip', name: 'Curl prone grip', sets: 3, reps: 12, kg: 20, muscles: ['forearms'] },
+      { id: 'curl-with-wrist-twist', name: 'Curl with a twist', sets: 3, reps: 12 }, // renamed by the user: left alone
+      { id: 'seated-row', name: 'Seated row', sets: 4, reps: 10, kg: 40 },
+      { id: 'remo-sentado', name: 'Seated Cable Row', sets: 4, reps: 12, kg: 35 },
+      { id: 'abductor', name: 'Abductor', sets: 3, reps: 10, kg: 39, desc: 'mine' },
+    ] }] })
+    expect(await repo.applyPacks()).toEqual(['curate-5'])
+    const ex = Object.fromEntries((await repo.db.exercises.toArray()).map(e => [e.id, e]))
+    expect(ex['curl-prone-grip']).toMatchObject({ name: 'Reverse Curl', names: { es: 'Curl inverso' }, kg: 20, sets: 3 })
+    expect(ex['curl-with-wrist-twist']).toMatchObject({ name: 'Curl with a twist' })
+    expect(ex['curl-with-wrist-twist'].desc).toBe('')
+    expect(ex['seated-row'].archived).toBe(true)
+    expect((await repo.db.groups.get('nuevo-grupo')).exerciseIds).not.toContain('seated-row')
+    expect(ex['abductor'].desc).toBe('mine') // fill never replaces
+    expect(ex['abductor'].link).toContain('hip+abduction')
   })
 
   it('phone with hand-made content from v3: only back-1 is added, nothing of the user\'s changes', async () => {
@@ -87,7 +128,7 @@ describe('applyPacks', () => {
     const repo = createRepo(createDb(name))
     expect(await repo.applyPacks()).toEqual(PACKS.slice(2).map(p => p.id)) // curate-1 onwards
     const { groups, exercises } = await repo.library()
-    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)', 'Push ups', 'Hip thrust', 'Chest', 'Kegels · Men', 'Kegels · Women'])
+    expect(groups.map(g => g.name)).toEqual(['Kettlebell Supergroup', 'Back', 'Back (classic)', 'Push ups', 'Hip thrust', 'Chest', 'Bodyweight', 'Military Calisthenics', 'Kegels · Men', 'Kegels · Women'])
     expect(groups[1].exerciseIds).toEqual(['my-row'])
     expect(exercises.find(e => e.id === 'my-row')).toMatchObject({ kg: 70, muscles: [] })
     expect(groups[2].exerciseIds).toContain('my-row') // their Barbell Row, by name
@@ -99,7 +140,7 @@ describe('applyPacks', () => {
     const mine = { format: 'exercise-tracker/backup', version: 1, exercises: [], groups: [{ id: 'x', name: 'Only mine', order: 0, exerciseIds: [] }], sets: [], sessions: [], notes: [] }
     await repo.restore(mine)
     expect(await repo.applyPacks()).toEqual(PACKS.slice(2).map(p => p.id)) // curate-1 onwards
-    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back', 'Push ups', 'Hip thrust', 'Chest', 'Kegels · Men', 'Kegels · Women'])
+    expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine', 'Back', 'Push ups', 'Hip thrust', 'Chest', 'Bodyweight', 'Military Calisthenics', 'Kegels · Men', 'Kegels · Women'])
     await repo.restore({ ...mine, packs: PACKS.map(p => p.id) })
     expect(await repo.applyPacks()).toEqual([])
     expect((await repo.library()).groups.map(g => g.name)).toEqual(['Only mine'])

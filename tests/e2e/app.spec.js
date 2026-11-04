@@ -4,9 +4,15 @@ import { CHANGELOG } from '../../src/lib/changelog.js'
 
 const VERSION = JSON.parse(readFileSync('package.json', 'utf8')).version
 
+/** Open the app and wait past the splash: a fresh phone seeds every pack first, which takes a while on a loaded WebKit. */
+const open = async page => {
+  await page.goto('/')
+  await expect(page.getByRole('tab').first()).toBeVisible({ timeout: 30_000 })
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v })), VERSION)
-  await page.goto('/')
+  await open(page)
 })
 
 const row = (page, name) => page.locator('li', { has: page.getByRole('button', { name: `Log set: ${name}`, exact: true }) })
@@ -262,7 +268,7 @@ test('Today toggle lists what was done today across groups', async ({ page }) =>
   await page.getByRole('tab', { name: 'Biceps' }).click()
   await page.getByRole('button', { name: 'Log set: Barbell Curl', exact: true }).click()
   await page.getByRole('button', { name: 'Log set', exact: true }).click()
-  await expect(row(page, 'Barbell Curl').getByTestId('count')).toHaveText('1/3')
+  await expect(row(page, 'Barbell Curl').getByTestId('count')).toHaveText('1/4') // every target is at least 4 sets
 
   await page.getByRole('button', { name: 'Only my current workout' }).click()
   await expect(page.getByTestId('today-bar')).toBeVisible()
@@ -597,9 +603,11 @@ test('stopwatch: start, lap, stop, reset; digital and analog; keeps running when
   await expect(page.getByTestId('laps')).toHaveCount(0)
 })
 
-test('recap title is drawn and kept with the session; Chest sits before Kegels; version shows', async ({ page }) => {
+test('recap title is drawn and kept with the session; Chest and the bodyweight groups sit before Kegels; version shows', async ({ page }) => {
   const tabs = page.getByRole('tab')
-  await expect(tabs.nth(-4)).toHaveText('Chest')
+  await expect(tabs.nth(-6)).toHaveText('Chest')
+  await expect(tabs.nth(-5)).toHaveText('Bodyweight')
+  await expect(tabs.nth(-4)).toHaveText('Military Calisthenics')
   await expect(tabs.nth(-3)).toHaveText('Kegels · Men')
 
   await page.getByRole('button', { name: 'Start session' }).click()
@@ -645,11 +653,11 @@ test("after an update the what's-new screen shows once; a fresh install skips it
   const dialog = page.getByRole('dialog', { name: "What's new" })
   const seen = () => page.evaluate(() => JSON.parse(localStorage.getItem('exercise-tracker:settings')).lastSeenVersion)
   await page.reload()
-  await expect(page.getByRole('tab').first()).toBeVisible()
+  await expect(page.getByRole('tab').first()).toBeVisible({ timeout: 30_000 })
   await expect.poll(seen).toBe(VERSION)
   await expect(dialog).toHaveCount(0)
   await page.reload()
-  await expect(dialog).toBeVisible()
+  await expect(dialog).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('whatsnew-version')).toHaveText(VERSION)
   await expect(dialog).toContainText(CHANGELOG[1].version) // the previous release is listed too
   await dialog.getByRole('button', { name: 'OK' }).click()
@@ -659,7 +667,7 @@ test("after an update the what's-new screen shows once; a fresh install skips it
 
 test('body weight makes bodyweight sets count in the kg tally of the ✓ view and in the summary', async ({ page }) => {
   await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v, bodyKg: 80 })), VERSION)
-  await page.goto('/')
+  await open(page)
   await page.getByRole('button', { name: 'Start session' }).click()
   await page.getByRole('tab', { name: 'Push ups' }).click()
   await page.getByRole('button', { name: 'Log set: Push ups', exact: true }).click()
@@ -681,7 +689,7 @@ test('body weight makes bodyweight sets count in the kg tally of the ✓ view an
 
 test('training with a partner: sets are counted apart, the summary has their block, the recap makes two images', async ({ page }) => {
   await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v, userName: 'Toni', partnerMode: true, partnerName: 'Ana', partnerKg: 60 })), VERSION)
-  await page.goto('/')
+  await open(page)
   const who = page.getByRole('group', { name: 'Who is logging' })
   await expect(who.getByRole('button', { name: 'Toni' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Start session' }).click()

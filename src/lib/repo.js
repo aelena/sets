@@ -46,6 +46,9 @@ export const createRepo = (db, clock = () => Date.now()) => {
           const have = await db.activities.toArray()
           const missing = pack.activities.filter(a => !have.some(h => h.id === a.id || h.name.toLowerCase() === a.name.toLowerCase()))
           await db.activities.bulkAdd(missing)
+        } else if (pack.kind === 'minSets') {
+          // every live target with fewer sets than the floor goes to the floor, the user's own included
+          for (const e of exercises.filter(x => !x.archived && (x.sets ?? 0) < pack.min)) await db.exercises.update(e.id, { sets: pack.min })
         } else {
           const plan = planPack(pack, { exercises, groups })
           const { addExercises, addGroups, append } = plan

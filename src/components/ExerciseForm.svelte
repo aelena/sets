@@ -2,14 +2,14 @@
   import { untrack } from 'svelte'
   import { t } from '../lib/i18n.js'
   import { groups } from '../lib/store.js'
-  import { MUSCLES } from '../lib/seed.js'
+  import { MUSCLES, MIN_SETS } from '../lib/seed.js'
   import { settings } from '../lib/settings.js'
   import { nameOf } from '../lib/names.js'
 
   /** `exercise` null creates a new one. */
   let { exercise = null, onsave, oncancel, ondelete = null } = $props()
   // the form edits a copy; nothing is written until Save
-  let f = $state(untrack(() => ({ name: '', type: 'reps', sets: 3, reps: 10, seconds: 30, desc: '', link: '', ...exercise,
+  let f = $state(untrack(() => ({ name: '', type: 'reps', sets: MIN_SETS, reps: 10, seconds: 30, desc: '', link: '', ...exercise,
     kg: exercise?.kg ?? '', perSide: !!exercise?.perSide, muscles: [...(exercise?.muscles ?? [])], nameEs: exercise?.names?.es ?? '' })))
   const inGroups = $derived(exercise ? ($groups ?? []).filter(g => g.exerciseIds.includes(exercise.id)).map(g => nameOf(g, $settings.lang)) : [])
 

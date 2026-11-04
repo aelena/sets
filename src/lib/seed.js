@@ -3,6 +3,10 @@ import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './
 import { CURATE_3 } from './catalog3.js'
 import { REVIEW, PUSHUP_SUPERSERIES, CURATE_4 } from './catalog4.js'
 import { BURPEES, CORE_2 } from './catalog5.js'
+import { KEGELS_MEN_2, KEGELS_WOMEN_2, MILITARY, BODYWEIGHT, TRICEPS_3, CORE_3, CURATE_5 } from './catalog6.js'
+
+/** Every target has at least this many sets (user, 2026-11-04: "fix all of them to 4 sets by default"). */
+export const MIN_SETS = 4
 
 /** A YouTube search for good form: always resolves, and lets the user pick the video they like. */
 const yt = name => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} proper form`).replace(/%20/g, '+')}`
@@ -258,6 +262,17 @@ export const PACKS = [
   // 0.12.1: burpees in Functional (or the Push ups group on a phone without it); more core
   { id: 'functional-2', label: 'classic', appendTo: ['nuevo-grupo-2', 'push-ups'], appendOnly: true, groups: [{ name: 'Functional', exercises: BURPEES }] },
   { id: 'core-2', label: 'classic', appendTo: 'core', appendOnly: true, groups: [{ name: 'Core', exercises: CORE_2 }] },
+  // 0.15.0: the user's hand-made exercises named; Bodyweight and Military Calisthenics groups before
+  // the Kegels; more pelvic-floor work in each Kegels group; the weekly plan's missing staples;
+  // then every target with fewer than 4 sets goes to 4 (the user's rule, applied once)
+  CURATE_5,
+  { id: 'bodyweight-1', label: 'classic', before: ['kegels-men', 'kegels-women'], groups: [BODYWEIGHT] },
+  { id: 'military-1', label: 'classic', before: ['kegels-men', 'kegels-women'], groups: [MILITARY] },
+  { id: 'kegels-men-2', label: 'classic', appendTo: 'kegels-men', appendOnly: true, groups: [{ name: 'Kegels · Men', exercises: KEGELS_MEN_2 }] },
+  { id: 'kegels-women-2', label: 'classic', appendTo: 'kegels-women', appendOnly: true, groups: [{ name: 'Kegels · Women', exercises: KEGELS_WOMEN_2 }] },
+  { id: 'triceps-3', label: 'classic', appendTo: 'triceps', appendOnly: true, groups: [{ name: 'Triceps', exercises: TRICEPS_3 }] },
+  { id: 'core-3', label: 'classic', appendTo: 'core', appendOnly: true, groups: [{ name: 'Core', exercises: CORE_3 }] },
+  { id: 'sets-4-1', kind: 'minSets', min: MIN_SETS },
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

@@ -90,17 +90,21 @@ describe('applyPacks', () => {
 
   it('curate-5: renames the hand-made exercises under guard, folds an unused duplicate row, fills only gaps', async () => {
     const repo = createRepo(createDb(`packs-${n++}`))
-    await repo.db.meta.put({ key: 'packs', applied: PACKS.map(p => p.id).filter(id => id !== 'curate-5') })
+    await repo.db.meta.put({ key: 'packs', applied: PACKS.map(p => p.id).filter(id => !['curate-5', 'curate-6'].includes(id)) })
     await repo.importConfig({ groups: [{ id: 'nuevo-grupo', name: 'Back', exercises: [
+      { id: 'curl-barra-agarre-prono-y-subida-hombros', name: 'Curl barra agarre prono y subida hombros', sets: 3, reps: 8, kg: 25 },
       { id: 'curl-prone-grip', name: 'Curl prone grip', sets: 3, reps: 12, kg: 20, muscles: ['forearms'] },
       { id: 'curl-with-wrist-twist', name: 'Curl with a twist', sets: 3, reps: 12 }, // renamed by the user: left alone
       { id: 'seated-row', name: 'Seated row', sets: 4, reps: 10, kg: 40 },
       { id: 'remo-sentado', name: 'Seated Cable Row', sets: 4, reps: 12, kg: 35 },
       { id: 'abductor', name: 'Abductor', sets: 3, reps: 10, kg: 39, desc: 'mine' },
     ] }] })
-    expect(await repo.applyPacks()).toEqual(['curate-5'])
+    expect(await repo.applyPacks()).toEqual(['curate-5', 'curate-6'])
     const ex = Object.fromEntries((await repo.db.exercises.toArray()).map(e => [e.id, e]))
     expect(ex['curl-prone-grip']).toMatchObject({ name: 'Reverse Curl', names: { es: 'Curl inverso' }, kg: 20, sets: 3 })
+    // curate-5 read it as a shrug, curate-6 corrects it in the same run; the user's wording stays as the last line
+    expect(ex['curl-barra-agarre-prono-y-subida-hombros']).toMatchObject({ name: 'Reverse Curl and Press', kg: 25 })
+    expect(ex['curl-barra-agarre-prono-y-subida-hombros'].desc.split('\n').at(-1)).toBe('Curl barra agarre prono y subida hombros')
     expect(ex['curl-with-wrist-twist']).toMatchObject({ name: 'Curl with a twist' })
     expect(ex['curl-with-wrist-twist'].desc).toBe('')
     expect(ex['seated-row'].archived).toBe(true)

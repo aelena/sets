@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.15.1',
+    en: ['Your overhand curl that ends pressing the bar overhead is "Reverse Curl and Press" (it was read as a shrug).'],
+    es: ['Tu curl prono que acaba empujando la barra sobre la cabeza es "Curl inverso y press sobre la cabeza" (se había leído como encogimiento).'],
+  },
+  {
     version: '0.15.0',
     en: ['Two new groups before the Kegels: Bodyweight (the seven-column chart) and Military Calisthenics (the 28- and 30-day challenges).', 'Kegels · Men and · Women: the pelvic-floor posters, bird dog to child\'s pose.', 'Every target now has at least 4 sets; your hand-made exercises got names in both languages and cues.'],
     es: ['Dos grupos nuevos antes de los Kegel: Peso corporal (la tabla de siete columnas) y Calistenia militar (los retos de 28 y 30 días).', 'Kegel · Hombres y · Mujeres: los pósteres de suelo pélvico, del perro de caza a la postura del niño.', 'Todos los objetivos tienen ya al menos 4 series; tus ejercicios hechos a mano tienen nombre en los dos idiomas e indicaciones.'],

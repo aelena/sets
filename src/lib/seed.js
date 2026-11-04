@@ -3,7 +3,7 @@ import { PUSHUPS, HIP_THRUSTS, KEGEL_GROUPS, SPRINTS, CURATE_2, CHEST } from './
 import { CURATE_3 } from './catalog3.js'
 import { REVIEW, PUSHUP_SUPERSERIES, CURATE_4 } from './catalog4.js'
 import { BURPEES, CORE_2 } from './catalog5.js'
-import { KEGELS_MEN_2, KEGELS_WOMEN_2, MILITARY, BODYWEIGHT, TRICEPS_3, CORE_3, CURATE_5 } from './catalog6.js'
+import { KEGELS_MEN_2, KEGELS_WOMEN_2, MILITARY, BODYWEIGHT, TRICEPS_3, CORE_3, CURATE_5, CURATE_6 } from './catalog6.js'
 
 /** Every target has at least this many sets (user, 2026-11-04: "fix all of them to 4 sets by default"). */
 export const MIN_SETS = 4
@@ -273,6 +273,8 @@ export const PACKS = [
   { id: 'triceps-3', label: 'classic', appendTo: 'triceps', appendOnly: true, groups: [{ name: 'Triceps', exercises: TRICEPS_3 }] },
   { id: 'core-3', label: 'classic', appendTo: 'core', appendOnly: true, groups: [{ name: 'Core', exercises: CORE_3 }] },
   { id: 'sets-4-1', kind: 'minSets', min: MIN_SETS },
+  // 0.15.1: the curl-and-press, named after the user explained it
+  CURATE_6,
 ]
 
 /** Muscles of every built-in exercise by name, to fill in exercises that have none (never overwriting). */

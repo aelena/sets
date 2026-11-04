@@ -378,3 +378,18 @@ export const CURATE_5 = {
     { from: 'diverging-seated-row', fromName: 'Diverging seated row', into: 'remo-sentado-divergente' },
   ],
 }
+
+/**
+ * curate-6 (0.15.1): the user explained the movement curate-5 had read as a shrug: an overhand curl
+ * to the chin, then the bar pressed straight overhead (and maybe lowered behind the neck for the
+ * triceps). Guarded on the curate-5 name, so it only touches a phone that got that one.
+ */
+export const CURATE_6 = {
+  id: 'curate-6', kind: 'curate',
+  exercises: [
+    { id: 'curl-barra-agarre-prono-y-subida-hombros', from: 'Reverse Curl with Shrug',
+      set: { name: 'Reverse Curl and Press', names: { es: 'Curl inverso y press sobre la cabeza' }, muscles: ['forearms', 'biceps', 'shoulders', 'triceps'],
+        desc: `${both('Overhand grip: curl the bar up to the chin for the forearms, then press it straight overhead to full arm length; lower the same way. To add the triceps, lower it behind the neck before pressing back up.', 'Agarre prono: sube la barra en curl hasta la barbilla para los antebrazos y luego empújala en vertical hasta estirar los brazos; baja igual. Para sumar tríceps, bájala por detrás de la nuca antes de volver a empujar.')}\nCurl barra agarre prono y subida hombros`,
+        link: yt('reverse curl to overhead press barbell') } },
+  ],
+}

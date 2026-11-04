@@ -6,7 +6,21 @@ Built for one person's routine first. Anyone can use it; whatever you log stays 
 
 Live at **https://aelena.com/sets/**.
 
-<!-- screenshots: docs/screenshots/*.png, light and dark -->
+## Screenshots
+
+iPhone 15, light and dark, with a training partner switched on.
+
+<p>
+  <img src="docs/screenshots/train.png" width="180" alt="Train: group tabs, the person switch, counters per exercise with the other person's count">
+  <img src="docs/screenshots/current-workout.png" width="180" alt="Current workout view with the kg tally per exercise and in total">
+  <img src="docs/screenshots/log-set.png" width="180" alt="Logging a set: reps and kg with steppers">
+  <img src="docs/screenshots/summary.png" width="180" alt="Session summary with the partner's block">
+</p>
+<p>
+  <img src="docs/screenshots/recap-sheet.png" width="180" alt="Recap sheet: one image per person, story or post, sparse or full, backgrounds">
+  <img src="docs/screenshots/recap-image.jpg" width="180" alt="The recap image as shared: date, name, duration, sets, exercises, kg, muscles">
+  <img src="docs/screenshots/settings.png" width="180" alt="Settings: name, body weight, language, theme, screen, font">
+</p>
 
 ## Install on an iPhone
 
@@ -205,7 +219,6 @@ The build is static and uses relative paths, so it works from any HTTPS static h
 
 - **Weight progression per set** (50 kg, then 60, then 70): logged sets already carry their own weight; the plan would let `kg` be a list, one value per set. The UI for editing it is still open.
 - Imperial units (lb, miles) as a setting.
-- Screenshots in this README.
 
 ## License
 

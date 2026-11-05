@@ -112,6 +112,10 @@
   {/if}
   <div class="muted small">{$t('partnerHint')}</div>
 
+  <h2>{$t('plan')}</h2>
+  <label class="check"><input type="checkbox" bind:checked={$settings.planNudges} /> {$t('planNudges')}</label>
+  <label class="check"><input type="checkbox" bind:checked={$settings.askHowItWent} /> {$t('askHowItWent')}</label>
+
   <h2>{$t('data')}</h2>
   <button onclick={exportXlsx}>{$t('exportXlsx')}</button>
   <button onclick={backupNow}>{$t('backup')}</button>

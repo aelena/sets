@@ -74,6 +74,24 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 - Activities appear in the summary, the recap, History, Progress (minutes, km, pace) and their own Excel sheet. Rename or remove them under **Edit → Activity**.
 - **Import a run (GPX)** (0.17.0): the run your watch or running app recorded (Apple Watch through an exporter such as HealthFit or RunGap, Strava, Garmin Connect, Nike Run Club, Runkeeper...), exported as GPX and picked from Files. The sheet shows the track's shape, distance, moving time (stops and auto-pause gaps left out), pace, climb (rises under 3 m are GPS noise) and the start and end times, lets you log it as Running or any other activity, and ticks **Add to that day's session** when the day has a finished timed session. The run is logged at its own date and time, so a run from last week lands on last week; the label carries the climb (`30 min · 5.2 km · 5:46/km · ↑42 m`), the recap image draws the route, and the route travels with backups, session exports and the Excel `ascent_m` column. The same run twice is refused. Sets tracks nothing itself: a web app on an iPhone cannot read GPS with the screen locked, so the recording stays with the tools built for it.
 
+### Intervals (Tabata, HIIT)
+
+In **Cardio & more → Intervals**, **New interval routine…** takes the routine written the way you would say it: `30 seconds, climbers - 30 seconds, cross climbers - 30 s burpees - 30 sceonds elbow plank, 30 shoulder touch planks`. Dashes, commas or one step per line; the number is seconds unless it says minutes; names before or after the number; typos in the unit are forgiven; `rest` / `descanso` steps are rests; `x3` or `3 rounds` sets the rounds. The sheet shows the steps as read and the total time, with rounds and a rest between rounds.
+
+**Run** opens a full-screen timer: a 5-second get-ready, then the current exercise and its countdown big, the next one below, step and round counters. The last 5 seconds flash, three short beeps count down and a long one marks each change. Pause, skip, finish. The screen stays on while it runs, whatever the keep-awake setting. At the end **Log it** records the time as the **Intervals** activity with the routine's name as its note.
+
+## Plans
+
+A **plan** is a weekly routine run for a set number of days from a start date: a "30-day challenge". It sits in its own **Plan** tab, beside the regular training, and timed sessions go on as usual while it runs.
+
+- **Import plan (JSON)** reads a plan file and asks for its **start date** (today by default, so a plan made beforehand starts with no missed days) and its **name**. Exercises are matched to your library by name, English or Spanish, case and accents ignored; the ones you do not have yet are added to the library, so each keeps one history. Importing under a name you already have replaces that plan: a refined version.
+- **Plans are reusable.** **Edit** changes the running plan's name and start date; **Stop plan** puts it away under **Your plans**, where **Start…** runs any stored plan again from a new date. There is no exercise editor in the app on purpose: the plan is the file.
+- **Download plan template…** saves a blank plan with instructions and the names of every exercise on your phone. Give it to ChatGPT or any AI assistant with what you want (days per week, goals, equipment) and import the JSON it returns. **Export plan** writes the current plan in the same shape, to refine it the same way. The repository's [plans/](plans) folder has the template with the built-in library, a guide to the format and example plans.
+- **What was done is your sets, nothing else.** A plan day is **done** when every planned exercise has a set that date, **in part** when some do (or you trained something else), **missed** (red) when a past training day has nothing. Missed days never stop the plan. The calendar shows the plan's weeks in those colours; tap a day for its exercises and targets, with what was logged ticked.
+- **On Train**, a plan training day adds a **Plan · <day>** tab first in the row: the day's exercises with the plan's sets, reps (the low end of a range) and kg, which also prefill the log sheet. Sets logged there are ordinary sets, in the running session or loose.
+- **Reminders:** **Add to Calendar…** saves an .ics file with every training day at the time you choose and an alarm 30 minutes before; open it and the iPhone Calendar does the reminding (a web app cannot schedule notifications without a server). Opening the app on a plan day shows **Plan · day 3: Legs** with **Train it**, and yesterday when it was missed; **Dismiss** hides it for the day, **Settings → Plan reminders when the app opens** turns it off.
+- Plans hold training only: no nutrition, no medical content. The format is described in [plans/README.md](plans/README.md).
+
 ## Progress
 
 - **Overview** (opens first):
@@ -87,6 +105,7 @@ Running, Rowing, Gym Bike and Sprints have their own tab; **Other activity…** 
 
 ## Sharing and exporting
 
+- **How did it go?** After ■ or Complete, before the summary, an optional note to yourself: type it or dictate it with the keyboard's microphone. It is kept as a note of that session (History, notes, session export); **Skip** goes straight on. **Settings → Ask "How did it go?" after a session** turns the step off.
 - **Session summary:** after ■ or Complete, stored as plain text: time or day, sets, exercises, activities, volume, rests and every exercise's sets; then the partner's block when training with one.
 - **Recap image for Instagram:** from the summary or any session in History. A 1080×1920 story or 1080×1350 post, **Sparse** (date, duration, sets, volume, muscles trained, personal bests) or **Full** (plus every exercise), over a gradient, a bundled gym photo or one picked from Photos, with an optional title of your own ("Killer day") printed big under the date and kept with the session. **Share** opens the iOS share sheet, Instagram included. Every recap prints `aelena.com/sets`.
 - **A run after the gym:** when a timed session is over and you log something later that day outside it (a run on the way home), the bar above the groups offers **Add to today's session** next to **Complete**: the run joins the session, the summary and total time are rebuilt, and **Share image** makes the recap again with it. The same is offered on the session in History while the day still has loose items.
@@ -197,6 +216,7 @@ npm test             # unit tests (vitest + fake-indexeddb)
 npx playwright install webkit chromium   # once
 npm run test:e2e     # builds, serves the build, runs on iPhone 15 profiles (WebKit and Chromium), 2 workers
 npm run test:recaps  # renders a fixture session over every background into recap-samples/
+npm run plan-template # rewrites plans/plan-template.json from the built-in library (a unit test says when)
 npm run build        # dist/, with service worker, icons and iOS launch images
 ```
 
@@ -205,13 +225,14 @@ To try it at phone size in a desktop browser: open the dev server, then DevTools
 Project layout:
 
 ```
-src/lib/        repo (all DB operations), db (Dexie schema, versions 1-5), packs (add-only library updates),
+src/lib/        repo (all DB operations), db (Dexie schema, versions 1-6), packs (add-only library updates),
                 seed / catalog / catalog2 (built-in library and curation), config, history (last batch, bests,
                 open workout), overview (Overview figures), summary, recap / recapImage, activity, gpx (GPX
-                reader, distance, moving time, climb, track fitting), drive, sessionFiles, wakeLock, export,
+                reader, distance, moving time, climb, track fitting), plan (plan files, days, status, .ics,
+                template), intervals (routine text, schedule, timing), drive, sessionFiles, wakeLock, export,
                 i18n, names, settings
-src/views/      Train, Progress, Edit, Settings
-src/components/ ExerciseRow, LogSheet, ActivitySheet, GpxSheet, Route, NotesSheet, RestTimer, SummaryModal,
+src/views/      Train, Plan, Progress, Edit, Settings
+src/components/ ExerciseRow, LogSheet, ActivitySheet, GpxSheet, Route, RoutineSheet, IntervalRun, NotesSheet, RestTimer, SummaryModal,
                 RecapSheet, Overview, MuscleWeeks, Calendar, Chart, ExerciseForm, Splash, Sheet, Toast, TabBar, Icon
 tests/unit      logic and repository tests
 tests/e2e       Playwright flows at iPhone size; recap.spec.js renders the recap samples

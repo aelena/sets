@@ -19,6 +19,9 @@ import { normalizeConfig } from './config.js'
  *   partnerSets    v5: the training partner's sets, same shape as `sets` (bw: body weight stamped on a
  *                  bodyweight set). A table of their own so nothing of the user's history, bests or
  *                  charts can ever count them by accident.
+ *   plans          v6: { id, name, start, days, week: { mon…sun: { name, rest, items: [{ exerciseId, sets, reps|seconds, kg }] } },
+ *                  overrides, rules, phases, active }. What was done is never stored here: it is the sets of each date.
+ *   routines       v6: interval routines { id, name, text, steps: [{ name, seconds, rest? }], rounds, restBetween }
  */
 export const createDb = (name = 'exercise-tracker') => {
   const db = new Dexie(name)
@@ -55,6 +58,8 @@ export const createDb = (name = 'exercise-tracker') => {
   })
   // v5: the partner's sets (couples mode)
   db.version(5).stores({ partnerSets: '++id, ts, date, exerciseId, sessionId, [exerciseId+date]' })
+  // v6: training plans (one active at a time) and interval routines
+  db.version(6).stores({ plans: 'id', routines: 'id' })
   db.on('populate', tx => tx.table('activities').bulkAdd(DEFAULT_ACTIVITIES))
   return db
 }

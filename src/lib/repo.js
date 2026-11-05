@@ -5,6 +5,7 @@ import { planPack, missingMuscles, missingNames, planCuration } from './packs.js
 import { ES_EXERCISES, ES_GROUPS, ES_ACTIVITIES } from './catalog.js'
 import { dateKey, uid, slugify } from './time.js'
 import { resolve, DEFAULT_ACTIVITIES } from './activity.js'
+import { normalizePlan } from './plan.js'
 
 export const IDLE_CLOSE_MS = 2 * 60 * 60 * 1000
 
@@ -286,6 +287,13 @@ export const createRepo = (db, clock = () => Date.now()) => {
     const session = await activeSession()
     return db.notes.add({ ts, date: dateKey(ts), sessionId: session?.id ?? null, text: text.trim() })
   }
+  /** "How did it go?" after a session: a note of that session, dated on its day, flagged as written after it. */
+  async function addSessionNote(sessionId, text) {
+    const session = await db.sessions.get(sessionId)
+    if (!session || !text?.trim()) return null
+    const ts = clock()
+    return db.notes.add({ ts, date: dateKey(session.start ?? ts), sessionId, text: text.trim(), after: true })
+  }
   const updateNote = (id, text) => db.notes.update(id, { text: text.trim() })
   const deleteNote = id => db.notes.delete(id)
 
@@ -344,6 +352,70 @@ export const createRepo = (db, clock = () => Date.now()) => {
     return used ? db.activities.update(id, { archived: true }) : db.activities.delete(id)
   }
 
+  /**
+   * A plan file in, started on `start` (default today) under `name` (default the file's): exercises
+   * it names that the phone lacks are added to the library (in no group), and it becomes the active
+   * plan. The id follows the name, so importing a refined version under the same name replaces it;
+   * every other plan stays stored, inactive, ready to start again. Returns { plan, created, warnings }.
+   */
+  async function importPlan(json, { start, name } = {}) {
+    const known = await db.exercises.toArray()
+    const today = dateKey(clock())
+    const { plan, created, warnings } = normalizePlan(json, known, today)
+    const renamed = name?.trim() && name.trim() !== plan.name
+    const row = {
+      ...plan, start: start || today, active: true, imported: clock(),
+      ...(renamed ? { name: name.trim(), id: slugify(name.trim()), names: undefined } : {}),
+    }
+    if (renamed) delete row.names
+    await db.transaction('rw', db.exercises, db.plans, async () => {
+      if (created.length) await db.exercises.bulkAdd(created)
+      await db.plans.toCollection().modify({ active: false })
+      await db.plans.put(row)
+    })
+    return { plan: row, created, warnings: warnings.filter(w => !w.startsWith('no start date')) }
+  }
+  const activePlan = async () => (await db.plans.toArray()).find(p => p.active) ?? null
+  /** Rename a plan and/or move its start date; a new name drops the file's Spanish name, which would hide it. */
+  async function updatePlan(id, { name, start, ...patch } = {}) {
+    const p = await db.plans.get(id)
+    if (!p) return
+    const next = { ...p, ...patch, ...(start ? { start } : {}) }
+    if (name?.trim() && name.trim() !== p.name) { next.name = name.trim(); delete next.names }
+    await db.plans.put(next)
+  }
+  /** A stored plan started again (or the active one restarted): new start date, optionally a new name. */
+  async function startPlan(id, { start, name } = {}) {
+    await db.transaction('rw', db.plans, async () => {
+      await db.plans.toCollection().modify({ active: false })
+      await updatePlan(id, { start: start || dateKey(clock()), name, active: true })
+    })
+  }
+  /** Stop the active plan: kept, inactive, to start again later. */
+  const stopPlan = id => db.plans.update(id, { active: false })
+  const deletePlan = id => db.plans.delete(id)
+  /** The user's own sets between two dates, as date → Set of exercise ids: what plan days are judged by. */
+  async function loggedByDate(from, to) {
+    const rows = await db.sets.where('date').between(from, to, true, true).toArray()
+    const out = new Map()
+    for (const s of rows) (out.get(s.date) ?? out.set(s.date, new Set()).get(s.date)).add(s.exerciseId)
+    return out
+  }
+
+  const saveRoutine = async r => {
+    const row = { ...r, id: r.id ?? uid(), name: String(r.name ?? '').trim() || 'Intervals' }
+    await db.routines.put(row)
+    return row
+  }
+  const deleteRoutine = id => db.routines.delete(id)
+  /** A finished interval run, logged as the Intervals activity with the routine's name as its note. */
+  async function logIntervals({ name, seconds }) {
+    const have = await db.activities.get('intervals')
+    if (!have) await db.activities.add({ id: 'intervals', name: 'Intervals', names: { es: 'Intervalos' }, archived: false })
+    else if (have.archived) await db.activities.update('intervals', { archived: false })
+    return logActivity({ activityId: 'intervals', minutes: Math.round((seconds / 60) * 10) / 10, notes: name ?? '' })
+  }
+
   async function saveExercise(raw) {
     const known = await db.exercises.toArray()
     const taken = new Set(known.map(e => e.id))
@@ -398,11 +470,12 @@ export const createRepo = (db, clock = () => Date.now()) => {
   const configFile = async () => exportConfig(await library())
 
   const everything = async () => {
-    const [lib, sets, sessions, notes, activities, activityLogs, partnerSets] = await Promise.all([
+    const [lib, sets, sessions, notes, activities, activityLogs, partnerSets, plans, routines] = await Promise.all([
       library(), db.sets.toArray(), db.sessions.toArray(), db.notes.toArray(), db.activities.toArray(), db.activityLogs.toArray(), db.partnerSets.toArray(),
+      db.plans.toArray(), db.routines.toArray(),
     ])
     const packs = (await db.meta.get('packs'))?.applied ?? []
-    return { ...lib, sets, sessions, notes, activities, activityLogs, packs, ...(partnerSets.length ? { partnerSets } : {}) }
+    return { ...lib, sets, sessions, notes, activities, activityLogs, packs, ...(partnerSets.length ? { partnerSets } : {}), ...(plans.length ? { plans } : {}), ...(routines.length ? { routines } : {}) }
   }
 
   async function backup(settings = {}) {
@@ -411,7 +484,7 @@ export const createRepo = (db, clock = () => Date.now()) => {
 
   async function restore(json) {
     if (json?.format !== BACKUP_FORMAT) throw new Error('Not a full backup file')
-    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs, db.meta, db.partnerSets]
+    const tables = [db.exercises, db.groups, db.sets, db.sessions, db.rests, db.notes, db.activities, db.activityLogs, db.meta, db.partnerSets, db.plans, db.routines]
     await db.transaction('rw', tables, async () => {
       await Promise.all(tables.map(t => t.clear()))
       await db.exercises.bulkPut(json.exercises ?? [])
@@ -423,6 +496,8 @@ export const createRepo = (db, clock = () => Date.now()) => {
       // v1 backups predate activities: keep the defaults rather than an empty list
       await db.activities.bulkPut(json.activities ?? DEFAULT_ACTIVITIES)
       await db.activityLogs.bulkPut(json.activityLogs ?? [])
+      await db.plans.bulkPut(json.plans ?? [])
+      await db.routines.bulkPut(json.routines ?? [])
       // the backup is the user's library as they left it: no built-in pack is re-added on top
       // backups made before packs were tracked: only the packs of that time count as applied
       await db.meta.put({ key: 'packs', applied: json.packs ?? ['base-1', 'classic-1'] })
@@ -458,14 +533,15 @@ export const createRepo = (db, clock = () => Date.now()) => {
       ...(partnerSets.length ? { partnerSets: partnerSets.map(setOut) } : {}),
       activities: activityLogs.map(l => ({ time: iso(l.ts), activity: name(activities, l.activityId), minutes: l.minutes, km: l.km, notes: l.notes,
         ...(l.gpx ? { gpx: { name: l.gpx.name, elapsedMinutes: l.gpx.elapsed, ascent: l.gpx.ascent, track: l.gpx.track } } : {}) })),
-      notes: notes.map(n => ({ time: iso(n.ts), text: n.text })),
+      notes: notes.map(n => ({ time: iso(n.ts), text: n.text, ...(n.after ? { after: true } : {}) })),
     }
   }
 
   return {
     db, library, seedIfEmpty, applyPacks, logSet, updateSet, deleteSet, restoreSet, partnerSetsOf,
     activeSession, startSession, stopSession, autoCloseStale,
-    activeRest, startRest, stopRest, addNote, updateNote, deleteNote,
+    activeRest, startRest, stopRest, addNote, addSessionNote, updateNote, deleteNote,
+    importPlan, activePlan, updatePlan, startPlan, stopPlan, deletePlan, loggedByDate, saveRoutine, deleteRoutine, logIntervals,
     saveExercise, deleteExercise, saveGroup, deleteGroup, moveGroup,
     importConfig, configFile, backup, restore, exportData,
     setRecapTitle, refreshSummaries, sessionExport, pendingAdHoc, completeAdHoc, timedSessionOn, looseOnDayOf, bundleLoose, ensureActivity, logActivity, importGpx, updateActivityLog, deleteActivityLog, restoreActivityLog, renameActivity, deleteActivity,

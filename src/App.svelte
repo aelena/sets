@@ -7,6 +7,7 @@
   import { resumeDrive } from './lib/sessionFiles.js'
   import * as wake from './lib/wakeLock.js'
   import { watch, running as watchRunning } from './lib/stopwatch.js'
+  import { intervalRunning } from './lib/intervals.js'
   import { activeSession, now, notify } from './lib/store.js'
   import { dateKey } from './lib/time.js'
   import TabBar from './components/TabBar.svelte'
@@ -17,6 +18,7 @@
   import Progress from './views/Progress.svelte'
   import Edit from './views/Edit.svelte'
   import Settings from './views/Settings.svelte'
+  import Plan from './views/Plan.svelte'
   import Splash from './components/Splash.svelte'
   import WhatsNew from './components/WhatsNew.svelte'
   import { newSince } from './lib/changelog.js'
@@ -39,7 +41,8 @@
   // keep the screen on: always, or while a timed session or a rest is running, per Settings
   $effect(() => {
     const mode = $settings.keepAwake ?? 'session'
-    wake.want(mode === 'always' || (mode === 'session' && (!!$activeSession || !!$activeRest || watchRunning($watch))))
+    // an interval run keeps the screen on in any mode: the phone sits in front of you through the series
+    wake.want(mode === 'always' || $intervalRunning || (mode === 'session' && (!!$activeSession || !!$activeRest || watchRunning($watch))))
   })
 
   const closeStale = async () => {
@@ -75,6 +78,7 @@
 
 {#if ready}
   {#if $settings.tab === 'progress'}<Progress />
+  {:else if $settings.tab === 'plan'}<Plan />
   {:else if $settings.tab === 'edit'}<Edit />
   {:else if $settings.tab === 'settings'}<Settings />
   {:else}<Train />{/if}

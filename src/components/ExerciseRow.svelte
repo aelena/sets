@@ -11,7 +11,8 @@
   let { exercise: ex, sets, last = null, bests = new Set(), kg = null, other = null, onlog, onedit } = $props()
   let open = $state(false)
 
-  const target = $derived(
+  // an exercise on the plan's tab carries the plan's own target text ("3 × 10–12 · 40 kg")
+  const target = $derived(ex.planTarget ??
     `${ex.sets} × ${ex.type === 'time' ? `${ex.seconds}s` : ex.reps}${ex.perSide ? ` (${$t('perSide')})` : ''}` +
     (ex.kg != null ? ` · ${ex.kg} kg` : ` · ${$t('bodyweight')}`) + (ex.lifts > 1 ? ` · ${$t('liftsShort', { n: ex.lifts })}` : ''))
   const done = $derived(sets.length >= ex.sets)

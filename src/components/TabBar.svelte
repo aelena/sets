@@ -2,7 +2,7 @@
   import Icon from './Icon.svelte'
   import { settings } from '../lib/settings.js'
   import { t } from '../lib/i18n.js'
-  const tabs = [['train', 'train'], ['progress', 'chart'], ['edit', 'edit'], ['settings', 'gear']]
+  const tabs = [['train', 'train'], ['plan', 'calendar'], ['progress', 'chart'], ['edit', 'edit'], ['settings', 'gear']]
 </script>
 
 <nav>

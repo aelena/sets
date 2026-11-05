@@ -524,3 +524,58 @@ describe('lifts per rep on compound moves', async () => {
     expect(weekly({ sessions: [closed], sets, exercisesById: ex, now: T0 })[11].volume).toBe(640)
   })
 })
+
+describe('plans, routines and the after-session note', () => {
+  const file = {
+    format: 'sets/plan', name: 'Challenge', start: '2026-10-16', days: 30,
+    week: { fri: { name: 'Kettlebells', items: [{ exercise: 'Halos', sets: 3, reps: 12 }, { exercise: 'Cable Glute Kickback', es: 'Patada de glúteo', sets: 3, reps: 15 }] } },
+  }
+
+  it('imports a plan as the active one, adds the missing exercises, replaces it on re-import', async () => {
+    const { plan, created } = await repo.importPlan(file)
+    expect(created.map(e => e.id)).toEqual(['cable-glute-kickback'])
+    expect(await repo.db.exercises.get('cable-glute-kickback')).toMatchObject({ name: 'Cable Glute Kickback', names: { es: 'Patada de glúteo' } })
+    expect((await repo.activePlan()).id).toBe(plan.id)
+    expect(plan.week.fri.items[0].exerciseId).toBe('halos')
+
+    const again = await repo.importPlan({ ...file, days: 28 }) // the refined version
+    expect(again.created).toEqual([]) // the kickback is in the library now
+    expect(await repo.db.plans.count()).toBe(1)
+    expect((await repo.activePlan()).days).toBe(28)
+    await repo.importPlan({ ...file, name: 'Another' })
+    expect((await repo.db.plans.toArray()).map(p => [p.id, p.active])).toEqual([['another', true], ['challenge', false]])
+
+    await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    const by = await repo.loggedByDate('2026-10-01', '2026-10-31')
+    expect([...by.get('2026-10-16')]).toEqual(['halos'])
+
+    const file2 = await repo.backup()
+    expect(file2.plans).toHaveLength(2)
+    await repo.deletePlan('another')
+    await repo.restore(file2)
+    expect(await repo.db.plans.count()).toBe(2)
+  })
+
+  it('stores routines and logs a finished run as the Intervals activity', async () => {
+    const r = await repo.saveRoutine({ name: ' Core blast ', text: '30 s climbers', steps: [{ name: 'climbers', seconds: 30 }], rounds: 4, restBetween: 15 })
+    expect(r).toMatchObject({ name: 'Core blast', rounds: 4 })
+    const id = await repo.logIntervals({ name: 'Core blast', seconds: 165 })
+    expect(await repo.db.activityLogs.get(id)).toMatchObject({ activityId: 'intervals', minutes: 2.8, notes: 'Core blast' })
+    expect(await repo.db.activities.get('intervals')).toMatchObject({ name: 'Intervals', names: { es: 'Intervalos' } })
+    expect((await repo.backup()).routines).toHaveLength(1)
+    await repo.deleteRoutine(r.id)
+    expect(await repo.db.routines.count()).toBe(0)
+  })
+
+  it('keeps "how did it go" as a note of the session, on its day', async () => {
+    const s = await repo.startSession()
+    await repo.logSet({ exerciseId: 'halos', reps: 12, kg: 16 })
+    at(T0 + 60 * MIN); const closed = await repo.stopSession(L)
+    at(T0 + 6 * 60 * MIN) // written after midnight would still belong to the session's day
+    const id = await repo.addSessionNote(closed.id, '  Strong today, left knee a bit stiff  ')
+    expect(await repo.db.notes.get(id)).toMatchObject({ sessionId: s.id, date: '2026-10-16', text: 'Strong today, left knee a bit stiff', after: true })
+    expect((await repo.sessionExport(s.id)).notes).toEqual([expect.objectContaining({ text: 'Strong today, left knee a bit stiff', after: true })])
+    expect(await repo.addSessionNote(closed.id, '   ')).toBeNull()
+  })
+})

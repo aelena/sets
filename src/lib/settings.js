@@ -31,6 +31,10 @@ const defaults = {
   partnerName: '',
   partnerKg: null,
   who: 'me', // who the next set is logged for while partnerMode is on: 'me' | 'partner'
+  planNudges: true, // on opening the app: today's plan day, yesterday missed
+  nudgeDismissed: null, // the day the plan nudges were dismissed (YYYY-MM-DD)
+  planTime: '18:00', // the time of day the calendar export puts training days at
+  askHowItWent: true, // after a session: an optional note before the summary
 }
 
 const read = () => {
@@ -50,8 +54,8 @@ settings.subscribe(s => {
 })
 
 /** Fields that travel with a backup; navigation state stays on the device. */
-export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg }) =>
-  ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg })
+export const portable = ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg, planNudges, planTime, askHowItWent }) =>
+  ({ userName, lang, theme, font, driveClientId, driveAuto, keepAwake, bodyKg, partnerMode, partnerName, partnerKg, planNudges, planTime, askHowItWent })
 
 /** A body weight field as typed: a positive number, or null when empty or nonsense. */
 export const cleanKg = v => (v === '' || v == null || !Number.isFinite(+v) || +v <= 0 ? null : +v)

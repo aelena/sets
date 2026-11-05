@@ -37,7 +37,7 @@ const sessions = [
 test('recap samples over every background', async ({ page, browserName }, info) => {
   test.skip(browserName !== 'webkit', 'one browser is enough to look at')
   test.setTimeout(180_000)
-  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', userName: 'Antonio', lastBackup: Date.now(), lastSeenVersion: v })), JSON.parse(readFileSync('package.json', 'utf8')).version)
+  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', askHowItWent: false, userName: 'Antonio', lastBackup: Date.now(), lastSeenVersion: v })), JSON.parse(readFileSync('package.json', 'utf8')).version)
   await page.goto('/')
   await expect(page.getByRole('tab').first()).toBeVisible() // Dexie has created the schema
 

@@ -4,6 +4,11 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.18.0',
+    en: ['Plans: a new Plan tab for 30-day challenges and the like. Import one as JSON and choose its start date and name (a template for your AI assistant is there), train each day from its own tab on Train, see done and missed days, add the days to your Calendar, start a plan again later.', 'Intervals: write a Tabata or HIIT routine as text ("30 s climbers - 30 s burpees") and run it full screen, current and next exercise, the last 5 seconds flashing.', 'After a session, an optional "How did it go?" note before the summary.'],
+    es: ['Planes: una pestaña Plan para retos de 30 días y similares. Impórtalo en JSON y elige su fecha de inicio y su nombre (hay una plantilla para tu asistente de IA), entrena cada día desde su propia pestaña en Entrenar, mira los días hechos y perdidos, añade los días a tu Calendario, vuelve a empezar un plan más adelante.', 'Intervalos: escribe una rutina Tabata o HIIT como texto ("30 s escaladores - 30 s burpees") y ejecútala a pantalla completa, ejercicio actual y siguiente, los últimos 5 segundos parpadeando.', 'Tras una sesión, una nota opcional "¿Qué tal ha ido?" antes del resumen.'],
+  },
+  {
     version: '0.17.0',
     en: ['Cardio & more → Import a run (GPX): the run your watch or running app recorded, with its distance, moving time, pace, climb and route; it joins the day\'s session and the recap image draws the route.', 'Sets still tracks nothing itself: no GPS, no screen kept on.'],
     es: ['Cardio y más → Importar carrera (GPX): la carrera que grabó el reloj o la app de correr, con distancia, tiempo en movimiento, ritmo, desnivel y recorrido; se une a la sesión del día y la imagen resumen dibuja el recorrido.', 'Sets sigue sin registrar nada por sí mismo: ni GPS ni pantalla encendida.'],

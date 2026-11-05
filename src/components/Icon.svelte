@@ -22,6 +22,8 @@
     x: 'M6 6l12 12M18 6 6 18',
     minus: 'M5 12h14',
     video: 'M4 6h12v12H4zM16 10l5-3v10l-5-3',
+    calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+    timer: 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 10v4h3M9 2h6',
     flame: FLAME,
   }
 </script>

@@ -1,0 +1,275 @@
+{
+  "format": "sets/plan",
+  "version": 1,
+  "id": "muscle-30-days-5x",
+  "name": "30-day muscle gain, 5 days a week",
+  "names": {
+    "es": "Masa muscular en 30 días, 5 días a la semana"
+  },
+  "start": "",
+  "days": 30,
+  "goal": "Strength and muscle across the whole body, legs and glutes first",
+  "rules": [
+    "Warm up 5-10 minutes",
+    "Rest 90-120 s between sets on the big lifts",
+    "Pick weights that leave 2-3 reps in reserve; no training to failure",
+    "When every rep comes easily, add a little weight; not every week"
+  ],
+  "phases": [
+    {
+      "weeks": [
+        1
+      ],
+      "focus": "Settle into the routine",
+      "es": "Adaptarse a la rutina"
+    },
+    {
+      "weeks": [
+        2
+      ],
+      "focus": "Technique and consistency",
+      "es": "Técnica y constancia"
+    },
+    {
+      "weeks": [
+        3
+      ],
+      "focus": "Small strength increases",
+      "es": "Progresar poco a poco en fuerza"
+    },
+    {
+      "weeks": [
+        4
+      ],
+      "focus": "Consolidate and review",
+      "es": "Consolidar y evaluar"
+    }
+  ],
+  "week": {
+    "mon": {
+      "name": "Legs & glutes",
+      "names": {
+        "es": "Piernas y glúteos"
+      },
+      "items": [
+        {
+          "exercise": "Barbell Hip Thrust",
+          "es": "Hip thrust",
+          "sets": 4,
+          "reps": 10
+        },
+        {
+          "exercise": "Back Squat",
+          "es": "Sentadilla",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Leg Press",
+          "es": "Prensa",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Romanian Deadlift",
+          "es": "Peso muerto rumano",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Hip Abduction Machine",
+          "es": "Abductores",
+          "sets": 3,
+          "reps": 15
+        }
+      ]
+    },
+    "tue": {
+      "name": "Back & arms",
+      "names": {
+        "es": "Espalda y brazos"
+      },
+      "items": [
+        {
+          "exercise": "Lat Pulldown",
+          "es": "Jalón al pecho",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Seated Cable Row",
+          "es": "Remo sentado",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "One-arm Dumbbell Row",
+          "es": "Remo con mancuerna",
+          "sets": 3,
+          "reps": 10,
+          "perSide": true
+        },
+        {
+          "exercise": "Dumbbell Curl",
+          "es": "Curl de bíceps",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Tricep Pushdown",
+          "es": "Tríceps en polea",
+          "sets": 3,
+          "reps": 12
+        }
+      ]
+    },
+    "wed": {
+      "rest": true,
+      "name": "Rest",
+      "names": {
+        "es": "Descanso"
+      },
+      "note": "Easy walk, mobility."
+    },
+    "thu": {
+      "name": "Glutes & legs",
+      "names": {
+        "es": "Glúteos y piernas"
+      },
+      "items": [
+        {
+          "exercise": "Bulgarian Split Squat",
+          "es": "Sentadilla búlgara",
+          "sets": 3,
+          "reps": 10,
+          "perSide": true
+        },
+        {
+          "exercise": "Barbell Hip Thrust",
+          "es": "Hip thrust",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Leg Curl",
+          "es": "Curl femoral",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Leg Extension",
+          "es": "Extensión de cuádriceps",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Cable Glute Kickback",
+          "es": "Patada de glúteo",
+          "sets": 3,
+          "reps": 15,
+          "perSide": true
+        }
+      ]
+    },
+    "fri": {
+      "name": "Chest, shoulders & abs",
+      "names": {
+        "es": "Pecho, hombros y abdomen"
+      },
+      "items": [
+        {
+          "exercise": "Seated Chest Press",
+          "es": "Press de pecho",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Dumbbell Shoulder Press",
+          "es": "Press de hombros",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Lateral Raise",
+          "es": "Elevaciones laterales",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Pectoral Fly (Pec Deck)",
+          "es": "Aperturas de pecho",
+          "sets": 2,
+          "reps": 12
+        },
+        {
+          "exercise": "Plank",
+          "es": "Plancha",
+          "sets": 3,
+          "seconds": [
+            20,
+            30
+          ]
+        },
+        {
+          "exercise": "Crunches",
+          "es": "Crunch abdominal",
+          "sets": 2,
+          "reps": 15
+        }
+      ]
+    },
+    "sat": {
+      "name": "Full body",
+      "names": {
+        "es": "Cuerpo completo"
+      },
+      "items": [
+        {
+          "exercise": "Goblet Squat",
+          "es": "Sentadilla goblet",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Romanian Deadlift",
+          "es": "Peso muerto rumano",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Seated Cable Row",
+          "es": "Remo en polea",
+          "sets": 3,
+          "reps": 12
+        },
+        {
+          "exercise": "Dumbbell Bench Press",
+          "es": "Press de pecho con mancuernas",
+          "sets": 3,
+          "reps": 10
+        },
+        {
+          "exercise": "Lunges",
+          "es": "Zancadas",
+          "sets": 2,
+          "reps": 10,
+          "perSide": true
+        },
+        {
+          "exercise": "Dead Bug",
+          "es": "Dead bug",
+          "sets": 2,
+          "reps": 12
+        }
+      ]
+    },
+    "sun": {
+      "rest": true,
+      "name": "Rest",
+      "names": {
+        "es": "Descanso"
+      }
+    }
+  },
+  "overrides": {}
+}

@@ -11,7 +11,7 @@ const open = async page => {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v })), VERSION)
+  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', askHowItWent: false, lastBackup: Date.now(), lastSeenVersion: v })), VERSION)
   await open(page)
 })
 
@@ -666,7 +666,7 @@ test("after an update the what's-new screen shows once; a fresh install skips it
 })
 
 test('body weight makes bodyweight sets count in the kg tally of the ✓ view and in the summary', async ({ page }) => {
-  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v, bodyKg: 80 })), VERSION)
+  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', askHowItWent: false, lastBackup: Date.now(), lastSeenVersion: v, bodyKg: 80 })), VERSION)
   await open(page)
   await page.getByRole('button', { name: 'Start session' }).click()
   await page.getByRole('tab', { name: 'Push ups' }).click()
@@ -688,7 +688,7 @@ test('body weight makes bodyweight sets count in the kg tally of the ✓ view an
 })
 
 test('training with a partner: sets are counted apart, the summary has their block, the recap makes two images', async ({ page }) => {
-  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', lastBackup: Date.now(), lastSeenVersion: v, userName: 'Toni', partnerMode: true, partnerName: 'Ana', partnerKg: 60 })), VERSION)
+  await page.addInitScript(v => localStorage.setItem('exercise-tracker:settings', JSON.stringify({ lang: 'en', askHowItWent: false, lastBackup: Date.now(), lastSeenVersion: v, userName: 'Toni', partnerMode: true, partnerName: 'Ana', partnerKg: 60 })), VERSION)
   await open(page)
   const who = page.getByRole('group', { name: 'Who is logging' })
   await expect(who.getByRole('button', { name: 'Toni' })).toHaveAttribute('aria-pressed', 'true')
@@ -785,4 +785,152 @@ test('import a GPX run: the sheet shows the run, it joins the gym session of its
   await page.getByLabel('Import a run (GPX)…').setInputFiles({ name: 'retiro.gpx', mimeType: 'application/gpx+xml', buffer })
   await page.getByRole('button', { name: 'Import run' }).click()
   await expect(page.getByRole('alert')).toHaveText('This run is already logged.')
+})
+
+const PLAN = {
+  format: 'sets/plan', version: 1, name: 'Kettlebell month', start: '2026-11-03', days: 30, goal: 'Strength',
+  rules: ['Warm up 5 minutes'],
+  week: {
+    mon: { rest: true, name: 'Rest' },
+    tue: { name: 'Legs', items: [{ exercise: 'Leg Press', sets: 3, reps: [10, 12] }] },
+    wed: { name: 'Arms', items: [{ exercise: 'Dumbbell Curl', sets: 3, reps: 12 }] },
+    thu: { name: 'Kettlebells', items: [{ exercise: 'Halos', sets: 3, reps: 12, kg: 12 }, { exercise: 'Cable Glute Kickback', es: 'Patada de glúteo', sets: 3, reps: 15, perSide: true }] },
+    fri: { rest: true }, sat: { rest: true }, sun: { rest: true },
+  },
+}
+const planTab = page => page.getByRole('navigation').getByRole('button', { name: 'Plan' })
+
+test("a plan: import it, train today's day from its own tab, see done and missed days, export it to Calendar", async ({ page }) => {
+  await page.clock.setFixedTime(new Date(2026, 10, 5, 10, 0)) // Thursday, day 3
+  await page.reload()
+  await planTab(page).click()
+  await expect(page.getByText(/^No plan yet/)).toBeVisible()
+  await page.getByLabel('Import plan (JSON)…').setInputFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(PLAN)) })
+  // the start date and the name are chosen on import: today by default, so no missed days before it
+  const sheet = page.getByTestId('plan-start')
+  await expect(sheet.getByLabel('Plan name')).toHaveValue('Kettlebell month')
+  await expect(sheet.getByLabel('Start date')).toHaveValue('2026-11-05')
+  await expect(page.getByTestId('plan-span')).toHaveText('Day 1 Thu, Nov 5 · last day Fri, Dec 4 · 30 days')
+  await sheet.getByRole('button', { name: 'Start plan' }).click()
+  await expect(page.getByText('Plan imported: 1 new exercises')).toBeVisible()
+  await expect(page.getByTestId('plan-day')).toHaveText('Day 1 of 30 · Week 1')
+  await expect(page.getByTestId('plan-progress')).toHaveText('0 done · 0 in part · 0 missed')
+  await expect(page.locator('[data-date="2026-11-04"]')).toHaveAttribute('data-status', 'out')
+
+  // Edit: the plan really began on Tuesday
+  await page.getByTestId('plan-head').getByRole('button', { name: 'Edit', exact: true }).click()
+  await sheet.getByLabel('Start date').fill('2026-11-03')
+  await sheet.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('plan-day')).toHaveText('Day 3 of 30 · Week 1')
+  await expect(page.getByTestId('plan-progress')).toHaveText('0 done · 0 in part · 2 missed')
+  await expect(page.locator('[data-date="2026-11-04"]')).toHaveAttribute('data-status', 'missed')
+  await expect(page.locator('[data-date="2026-11-02"]')).toHaveAttribute('data-status', 'out')
+  const today = page.getByTestId('plan-today')
+  await expect(today).toContainText('Today · Kettlebells')
+  await expect(today).toContainText(/Halos\s*3 × 12 · 12 kg/)
+  await expect(today).toContainText(/Cable Glute Kickback\s*3 × 15 · per side/)
+
+  // Calendar and the ChatGPT template are files
+  const [ics] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Add to Calendar…' }).click()])
+  expect(ics.suggestedFilename()).toBe('sets-plan-kettlebell-month.ics')
+  const [tpl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download plan template…' }).click()])
+  expect(tpl.suggestedFilename()).toBe('sets-plan-template.json')
+
+  // Train it: the plan's tab with the plan's targets, and the nudge
+  await today.getByRole('button', { name: 'Train it' }).click()
+  await expect(page.getByRole('tab', { name: 'Plan · Kettlebells' })).toHaveAttribute('aria-selected', 'true')
+  const nudge = page.getByTestId('plan-nudge')
+  await expect(nudge).toContainText('Plan · day 3: Kettlebells')
+  await expect(nudge).toContainText("Yesterday's plan day (Arms) was missed")
+  await expect(page.locator('.title')).toHaveText(['Halos', 'Cable Glute Kickback'])
+  await expect(row(page, 'Halos').getByTestId('count')).toHaveText('0/3')
+  await expect(row(page, 'Halos')).toContainText('3 × 12 · 12 kg')
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await expect(page.getByLabel('reps')).toHaveValue('12')
+  await expect(page.getByLabel('kg', { exact: true })).toHaveValue('12')
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await expect(row(page, 'Halos').getByTestId('count')).toHaveText('1/3')
+  await nudge.getByRole('button', { name: 'Dismiss' }).click()
+  await expect(nudge).toHaveCount(0)
+
+  // back on Plan: today is in part, Halos ticked
+  await planTab(page).click()
+  await expect(page.locator('[data-date="2026-11-05"]')).toHaveAttribute('data-status', 'partial')
+  await expect(page.getByTestId('plan-today')).toContainText('✓ Halos')
+  await page.locator('[data-date="2026-11-03"]').click()
+  await expect(page.getByTestId('plan-today')).toContainText('Legs')
+  await expect(page.getByTestId('plan-today')).toContainText(/Leg Press\s*3 × 10–12/)
+
+  // stopped, it waits under Your plans; started again on a new date and name
+  page.on('dialog', d => d.accept())
+  await page.getByRole('button', { name: 'Stop plan' }).click()
+  await expect(page.getByText(/^No plan yet/)).toBeVisible()
+  await page.getByTestId('stored-plans').getByRole('button', { name: 'Start… Kettlebell month' }).click()
+  await expect(sheet.getByLabel('Start date')).toHaveValue('2026-11-05')
+  await sheet.getByLabel('Plan name').fill('Kettlebell month, again')
+  await sheet.getByRole('button', { name: 'Start plan' }).click()
+  await expect(page.getByTestId('plan-head')).toContainText('Kettlebell month, again')
+  await expect(page.getByTestId('plan-day')).toHaveText('Day 1 of 30 · Week 1')
+  await expect(page.getByTestId('stored-plans')).toHaveCount(0)
+})
+
+test('an interval routine: written as text, run with the current and next step, flashing at the end, logged', async ({ page }) => {
+  const t0 = new Date(2026, 10, 5, 18, 0).getTime()
+  await page.clock.setFixedTime(t0)
+  await page.reload()
+  await page.getByRole('tab', { name: 'Cardio & more' }).click()
+  await page.getByRole('button', { name: 'New interval routine…' }).click()
+  await page.getByLabel('Name').fill('Core blast')
+  await page.getByLabel('Steps').fill('30 seconds, climbers - 30 seconds, cross climbers - 30 seconds burpees - 30 sceonds elbow plank, 30 seconds straight arm plank, 30 shoulder touch planks')
+  await expect(page.getByTestId('routine-steps').locator('li')).toHaveText(['30 s climbers', '30 s cross climbers', '30 s burpees', '30 s elbow plank', '30 s straight arm plank', '30 s shoulder touch planks'])
+  await expect(page.getByTestId('routine-total')).toHaveText('6 steps · 3:00 in all')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Run: Core blast' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Run: Core blast' }).click()
+  await expect(page.getByTestId('interval-time')).toHaveText('3:00')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.getByTestId('interval-name')).toHaveText('Get ready')
+  await expect(page.getByTestId('interval-next')).toHaveText('Next: climbers · 30\u00a0s')
+  await page.clock.setFixedTime(t0 + 5_500)
+  await expect(page.getByTestId('interval-name')).toHaveText('climbers')
+  await expect(page.getByTestId('interval-time')).toHaveText('30')
+  await expect(page.getByTestId('interval-next')).toHaveText('Next: cross climbers · 30\u00a0s')
+  await expect(page.locator('.runner')).not.toHaveClass(/flash/)
+  await page.clock.setFixedTime(t0 + 5_000 + 26_000)
+  await expect(page.getByTestId('interval-time')).toHaveText('4')
+  await expect(page.locator('.runner')).toHaveClass(/flash/) // the last 5 seconds
+  await page.clock.setFixedTime(t0 + 5_000 + 181_000)
+  await expect(page.getByTestId('interval-total')).toHaveText('3:00')
+  await page.getByRole('button', { name: 'Log it' }).click()
+  await expect(page.getByRole('button', { name: 'Log activity: Intervals' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '3 min', exact: true })).toBeVisible()
+})
+
+test('"How did it go?" after stopping a session: kept as a note of the session, or skipped', async ({ page }) => {
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByLabel('Ask "How did it go?" after a session').check()
+  await page.getByRole('button', { name: 'Train' }).click()
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  const ask = page.getByRole('dialog', { name: 'How did it go?' })
+  await expect(ask).toBeVisible()
+  await ask.getByRole('textbox').fill('Strong today, grip gave out on the last set')
+  await ask.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByTestId('summary')).toContainText('1 sets · 1 exercises')
+  await page.getByRole('button', { name: 'Close' }).last().click()
+  await page.getByRole('button', { name: 'Notes' }).click()
+  await expect(page.getByText('Strong today, grip gave out on the last set')).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).last().click()
+
+  // the next one skipped straight to the summary and the image
+  await page.getByRole('button', { name: 'Start session' }).click()
+  await page.getByRole('button', { name: 'Log set: Halos', exact: true }).click()
+  await page.getByRole('button', { name: 'Log set', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop session' }).click()
+  await page.getByRole('button', { name: 'Skip' }).click()
+  await page.getByRole('button', { name: 'Share image' }).click()
+  await expect(page.getByTestId('recap-preview')).toBeVisible()
 })

@@ -14,6 +14,8 @@ export const activeRest = liveQuery(() => repo.activeRest().then(r => (r && !r.e
 export const setCount = liveQuery(() => db.sets.count())
 export const activities = liveQuery(() => db.activities.toArray().then(a => a.filter(x => !x.archived).sort((x, y) => x.name.localeCompare(y.name))))
 export const activityLogs = liveQuery(() => db.activityLogs.toArray())
+export const activePlan = liveQuery(() => repo.activePlan())
+export const routines = liveQuery(() => db.routines.toArray().then(r => r.sort((a, b) => a.name.localeCompare(b.name))))
 
 /** One clock for every running timer on screen. */
 export const now = readable(Date.now(), set => {
@@ -23,6 +25,8 @@ export const now = readable(Date.now(), set => {
 
 /** The session summary on screen after a stop (or an auto-close). */
 export const shownSummary = writable(null)
+/** The id of a session the user just ended by hand: its summary first asks "How did it go?". */
+export const askAbout = writable(null)
 
 /** Transient message at the bottom of the screen, optionally with an action (Undo). */
 export const toast = writable(null)

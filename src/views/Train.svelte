@@ -1,7 +1,11 @@
 <script>
   import { get } from 'svelte/store'
   import { liveQuery } from 'dexie'
-  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary, notify } from '../lib/store.js'
+  import { db, repo, groups, exercises, activities, activityLogs, activeSession, setCount, now, shownSummary, notify, activePlan, routines, askAbout } from '../lib/store.js'
+  import { planDay, nudges as planNudges, low, targetLabel, addDays } from '../lib/plan.js'
+  import { schedule, totalSeconds } from '../lib/intervals.js'
+  import RoutineSheet from '../components/RoutineSheet.svelte'
+  import IntervalRun from '../components/IntervalRun.svelte'
   import { lastBatch, personalBests, isOpen } from '../lib/history.js'
   import { settings } from '../lib/settings.js'
   import { t, summaryWords, partnerLabel } from '../lib/i18n.js'
@@ -38,9 +42,16 @@
 
   const exById = $derived(Object.fromEntries(($exercises ?? []).map(e => [e.id, e])))
   const ACTIVITIES_TAB = '__activities'
-  const onActivities = $derived(!$settings.todayOnly && $settings.groupId === ACTIVITIES_TAB)
-  const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
+  const PLAN_TAB = '__plan'
   const todayKey = $derived(dateKey($now))
+  const onActivities = $derived(!$settings.todayOnly && $settings.groupId === ACTIVITIES_TAB)
+  // the active plan's day today: its exercises, with the plan's targets, as a tab of their own
+  // keyed on the date, not the clock: a new object every second would rebuild the list and its history query
+  const planToday = $derived($activePlan ? planDay($activePlan, todayKey) : null)
+  const planTabOn = $derived(!!planToday && !planToday.rest)
+  const onPlan = $derived(!$settings.todayOnly && planTabOn && $settings.groupId === PLAN_TAB)
+  const planned = $derived(Object.fromEntries((planTabOn ? planToday.items : []).map(i => [i.exerciseId, i])))
+  const group = $derived(($groups ?? []).find(g => g.id === $settings.groupId) ?? $groups?.[0])
 
   // partner mode: every set is logged for one of the two; the screen shows the chosen person's workout
   const partnerOn = $derived(!!$settings.partnerMode)
@@ -73,13 +84,36 @@
   const otherSets = $derived(who === 'partner' ? openSets : openPartner)
   const todayOnly = $derived(!!$settings.todayOnly)
   const todayIds = $derived([...new Set(todaySets.map(s => s.exerciseId))])
-  const ids = $derived(todayOnly ? todayIds : onActivities ? [] : (group?.exerciseIds ?? []))
-  const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || !e.archived)))
+  const ids = $derived(todayOnly ? todayIds : onActivities ? [] : onPlan ? Object.keys(planned) : (group?.exerciseIds ?? []))
+  /** An exercise as the plan sets it today: its sets, reps or seconds (the low end of a range) and kg. */
+  const asPlanned = (ex, it) => {
+    const timed = ex.type === 'time'
+    return { ...ex, sets: it.sets, ...(timed ? { seconds: low(it.seconds) ?? ex.seconds } : { reps: low(it.reps) ?? ex.reps }),
+      ...(it.kg != null ? { kg: it.kg } : {}), perSide: !!it.perSide || ex.perSide, planTarget: targetLabel(it, ex, $t('perSide')) }
+  }
+  const list = $derived(ids.map(id => exById[id]).filter(e => e && (todayOnly || onPlan || !e.archived)).map(e => (onPlan ? asPlanned(e, planned[e.id]) : e)))
   // the kg tally of the current workout: what the ✓ view shows
   const tally = $derived({ sets: todaySets.length, exercises: todayIds.length, kg: Math.round(volume(todaySets, exById)) })
   const nf = $derived(new Intl.NumberFormat($settings.lang))
   /** In Today mode a new set goes to the group the exercise was last logged from today. */
-  const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : group?.id)
+  const groupFor = id => (todayOnly ? todaySets.filter(s => s.exerciseId === id).at(-1)?.groupId ?? null : onPlan ? null : group?.id)
+
+  // opening the app: today's plan day, yesterday missed (Settings can turn these off)
+  let recent = $state(new Map())
+  $effect(() => {
+    const p = $activePlan, day = todayKey
+    if (!p) { recent = new Map(); return }
+    const sub = liveQuery(() => repo.loggedByDate(addDays(day, -1), day)).subscribe(v => (recent = v))
+    return () => sub.unsubscribe()
+  })
+  const nudgeList = $derived($settings.planNudges !== false && $settings.nudgeDismissed !== todayKey && $activePlan ? planNudges($activePlan, recent, todayKey) : [])
+  const openPlanTab = () => { $settings.todayOnly = false; $settings.groupId = PLAN_TAB }
+
+  // interval routines: written as text, run full screen
+  let editing = $state(null) // { routine? }
+  let running = $state(null) // routine on the timer
+  const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  const routineTotal = r => totalSeconds(schedule({ steps: r.steps, rounds: r.rounds, restBetween: r.restBetween, prep: 0 }))
   // every set the person ever logged for the listed exercises: last time, personal bests
   let history = $state([])
   $effect(() => {
@@ -127,7 +161,7 @@
   }
   const complete = async () => {
     const touched = await repo.completeAdHoc(summaryWords(get(t)))
-    if (touched.length) shownSummary.set(touched.at(-1))
+    if (touched.length) { askAbout.set(touched.at(-1).id); shownSummary.set(touched.at(-1)) }
   }
   const todayActivities = $derived(($activities ?? []).filter(a => ($activityLogs ?? []).some(l => l.activityId === a.id && isOpen(l, activeId))))
 
@@ -146,7 +180,7 @@
 
   const stop = async () => {
     const closed = await repo.stopSession(summaryWords(get(t)))
-    if (closed) shownSummary.set(closed)
+    if (closed) { askAbout.set(closed.id); shownSummary.set(closed) }
     if (closed && $settings.driveAuto && driveReady()) uploadSession(closed.id, { quiet: true })
   }
 
@@ -182,8 +216,11 @@
     {/if}
   {:else if $groups?.length}
     <div class="groups" role="tablist">
+      {#if planTabOn}
+        <button role="tab" class="plan-tab" aria-selected={onPlan} onclick={openPlanTab}>{$t('planTab')} · {nameOf(planToday, $settings.lang)}</button>
+      {/if}
       {#each $groups as g (g.id)}
-        <button role="tab" aria-selected={!onActivities && g.id === group?.id} onclick={() => ($settings.groupId = g.id)}>{nameOf(g, $settings.lang)}</button>
+        <button role="tab" aria-selected={!onActivities && !onPlan && g.id === group?.id} onclick={() => ($settings.groupId = g.id)}>{nameOf(g, $settings.lang)}</button>
       {/each}
       <button role="tab" class="act-tab" aria-selected={onActivities} onclick={() => ($settings.groupId = ACTIVITIES_TAB)}>{$t('activitiesTab')}</button>
     </div>
@@ -196,6 +233,21 @@
       <span class="grow small" class:full={canJoin}>{looseText}</span>
       {#if canJoin}<button class="grow" onclick={addToSession}>{$t('addToSession')}</button>{/if}
       <button class="primary" class:grow={canJoin} onclick={complete}>{$t('complete')}</button>
+    </div>
+  {/if}
+  {#if nudgeList.length}
+    <div class="nudge card stack" data-testid="plan-nudge">
+      {#each nudgeList as n}
+        {#if n.kind === 'today'}
+          <div class="row"><span class="grow small"><strong>{$t('planNudgeToday', { n: n.day.n, name: nameOf(n.day, $settings.lang) })}</strong></span>
+            {#if !onPlan}<button class="primary" onclick={openPlanTab}>{$t('trainPlan')}</button>{/if}</div>
+        {:else if n.kind === 'missed'}
+          <div class="small missed">{$t('planNudgeMissed', { name: nameOf(n.day, $settings.lang) })}</div>
+        {:else}
+          <div class="small">{$t('planNudgeEnded')}</div>
+        {/if}
+      {/each}
+      <button class="ghost small dismiss" onclick={() => ($settings.nudgeDismissed = todayKey)}>{$t('dismiss')}</button>
     </div>
   {/if}
   {#if nagBackup}
@@ -260,6 +312,24 @@
     {/if}
   </ul>
   {/if}
+
+  {#if onActivities}
+    <h2>{$t('intervals')}</h2>
+    <ul class="list card">
+      {#each $routines ?? [] as r (r.id)}
+        <li class="activity">
+          <div class="row">
+            <button class="ghost grow name routine" onclick={() => (editing = { routine: r })}>
+              <span class="aname">{r.name}</span>
+              <span class="muted small">{$t('routineTotal', { n: r.steps.length * Math.max(1, r.rounds), t: mmss(routineTotal(r)) })}</span>
+            </button>
+            <button class="icon primary" aria-label="{$t('run')}: {r.name}" onclick={() => (running = r)}><Icon name="play" /></button>
+          </div>
+        </li>
+      {/each}
+      <li class="activity"><button class="ghost other" onclick={() => (editing = {})}>{$t('newRoutine')}</button></li>
+    </ul>
+  {/if}
 </main>
 
 {#if logging}
@@ -271,6 +341,8 @@
 {#if watchOpen}<Stopwatch onclose={() => (watchOpen = false)} />{/if}
 {#if doing}<ActivitySheet activity={doing.activity} log={doing.log} last={doing.last} onclose={() => (doing = null)} />{/if}
 {#if gpx}<GpxSheet run={gpx.run} fileName={gpx.fileName} onclose={() => (gpx = null)} />{/if}
+{#if editing}<RoutineSheet routine={editing.routine} onclose={() => (editing = null)} onrun={r => { editing = null; running = r }} />{/if}
+{#if running}<IntervalRun routine={running} onclose={() => (running = null)} />{/if}
 
 <style>
   header {
@@ -288,6 +360,11 @@
   .groups [aria-selected='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 700; }
   main { padding-top: 12px; }
   .nag { padding: 6px 6px 6px 12px; margin-bottom: 12px; }
+  .nudge { padding: 8px 8px 4px 12px; margin-bottom: 12px; border-color: var(--accent); gap: 6px; }
+  .nudge .missed { color: var(--danger); }
+  .nudge .dismiss { align-self: flex-end; min-height: 32px; color: var(--muted); }
+  .plan-tab { color: var(--accent); font-weight: 700; }
+  .routine { display: grid; gap: 2px; text-align: left; padding-left: 0; }
   .ticking { color: var(--flame); border-color: var(--flame); }
   .loose { padding: 6px 6px 6px 12px; margin-bottom: 12px; border-color: var(--accent); flex-wrap: wrap; }
   .loose .full { flex-basis: 100%; padding: 6px 0 2px; }
